@@ -11,7 +11,7 @@ export interface Announcement {
   scheduled_at?: string
   reminder_time?: string
   is_active?: boolean
-  status?: 'draft' | 'under_review' | 'approved' | 'rejected' | 'scheduled' | 'active' | 'urgent' | 'expired'
+  status?: 'under_review' | 'approved' | 'rejected' | 'scheduled' | 'active' | 'urgent' | 'expired'
   views_count?: number
   clicks_count?: number
   send_email?: boolean

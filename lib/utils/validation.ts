@@ -65,7 +65,7 @@ export function validateAnnouncement(data: any): ValidationErrorItem[] {
     errors.push({ field: 'status', message: 'Status must be a string' });
   }
 
-  const validStatuses = ['active', 'scheduled', 'draft', 'archived', 'urgent'];
+  const validStatuses = ['active', 'scheduled', 'urgent', 'expired'];
   if (data.status && !validStatuses.includes(data.status.toLowerCase())) {
     errors.push({ field: 'status', message: `Status must be one of: ${validStatuses.join(', ')}` });
   }

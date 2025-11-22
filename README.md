@@ -256,7 +256,7 @@ sst_announcement/
 - `scheduled_at` - When to publish (with timezone, Super Admin only)
 - `reminder_time` - Reminder notification time (with timezone)
 - `is_active` - Active status (boolean, default: true)
-- `status` - Enum: `scheduled`, `active`, `urgent`, `expired` (default: `draft` - note: `draft` is not in enum but used as default)
+- `status` - Enum: `scheduled`, `active`, `urgent`, `expired` (default: `active`)
 - `views_count` - View count (integer, default: 0)
 - `clicks_count` - Click count (integer, default: 0)
 - `send_email` - Whether to send email notification (boolean, default: false, not null)
@@ -290,7 +290,7 @@ sst_announcement/
 ### Student
 - View active announcements
 - Filter and search announcements
-- Cannot see scheduled or draft announcements
+- Cannot see scheduled announcements
 - Cannot create or modify announcements
 
 ### Student Admin

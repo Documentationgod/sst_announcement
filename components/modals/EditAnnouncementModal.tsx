@@ -181,8 +181,8 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
                 >
                   <option value="active">Active</option>
                   <option value="scheduled">Scheduled</option>
-                  <option value="draft">Draft</option>
-                  <option value="archived">Archived</option>
+                  <option value="urgent">Urgent</option>
+                  <option value="expired">Expired</option>
                 </select>
               </div>
             ) : (

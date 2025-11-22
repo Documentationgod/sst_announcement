@@ -100,9 +100,6 @@ export const isVisibleToUser = (
   
   // Regular users: check visibility rules
   
-  // Hide draft announcements from regular users
-  if (announcement.status === 'draft') return false
-  
   // Hide under_review announcements from regular users
   if (announcement.status === 'under_review') return false
   

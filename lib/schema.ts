@@ -35,7 +35,7 @@ export const announcements = pgTable('announcements', {
   scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
   reminderTime: timestamp('reminder_time', { withTimezone: true }),
   isActive: boolean('is_active').default(true),
-  status: announcementStatusEnum('status').default('draft').notNull(),
+  status: announcementStatusEnum('status').default('active').notNull(),
   viewsCount: integer('views_count').default(0),
   clicksCount: integer('clicks_count').default(0),
   sendEmail: boolean('send_email').default(false).notNull(),
