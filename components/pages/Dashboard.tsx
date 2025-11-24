@@ -6,7 +6,7 @@ import { Button } from '../ui/button';
 import { apiService } from '@/services/api';
 import type { Announcement, User, CreateAnnouncementData, UpdateAnnouncementData, AnalyticsStats } from '@/types';
 import { useAppUser } from '@/contexts/AppUserContext';
-import { isAnnouncementExpired } from '@/utils/dateUtils';
+import { isAnnouncementExpired, formatDateTime } from '@/utils/dateUtils';
 import {
   isVisibleToUser, 
   filterByCategory, 
@@ -123,9 +123,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
           );
         } else if (announcement?.scheduled_at) {
           // Superadmin with scheduled date
-          const scheduledDate = new Date(announcement.scheduled_at);
           showToast(
-            `Announcement created successfully! Scheduled for ${scheduledDate.toLocaleString()}`,
+            `Announcement created successfully! Scheduled for ${formatDateTime(announcement.scheduled_at)}`,
             'success'
           );
         } else {
@@ -649,7 +648,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                                           }
                                         >
                                           {a.status === 'scheduled' && a.scheduled_at
-                                            ? `Scheduled: ${new Date(a.scheduled_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}`
+                                            ? `Scheduled: ${formatDateTime(a.scheduled_at, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}`
                                             : a.status}
                                         </Badge>
                                       )}
@@ -662,7 +661,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                                   </Badge>
                                   <span className="text-gray-500">•</span>
                                   <span className="text-sm text-gray-400">
-                                    {a.created_at ? new Date(a.created_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : 'Unknown date'}
+                                    {formatDateTime(a.created_at, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
                                   </span>
                                 </div>
                                 {isPriorityActive && (

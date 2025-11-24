@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
 import { getConfig } from '../config/config';
 import { getEnvConfig } from '../config/env';
+import { formatDateTime } from '@/utils/dateUtils';
 
 const env = getEnvConfig();
 const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
@@ -38,17 +39,6 @@ export async function sendAnnouncementEmail({
       return { success: false, error: 'No recipients specified' };
     }
 
-    const formatDate = (dateString?: string | null) => {
-      if (!dateString) return 'Not specified';
-      return new Date(dateString).toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    };
-
     const htmlContent = `
       <!DOCTYPE html>
       <html>
@@ -75,13 +65,25 @@ export async function sendAnnouncementEmail({
                 ${expiryDate ? `
                 <tr>
                   <td style="padding: 8px 0; font-weight: bold; color: #667eea;">Expiry Date:</td>
-                  <td style="padding: 8px 0; color: #555;">${formatDate(expiryDate)}</td>
+                  <td style="padding: 8px 0; color: #555;">${formatDateTime(expiryDate, {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  }, 'en-US', 'Not specified')}</td>
                 </tr>
                 ` : ''}
                 ${scheduledAt ? `
                 <tr>
                   <td style="padding: 8px 0; font-weight: bold; color: #667eea;">Scheduled For:</td>
-                  <td style="padding: 8px 0; color: #555;">${formatDate(scheduledAt)}</td>
+                  <td style="padding: 8px 0; color: #555;">${formatDateTime(scheduledAt, {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  }, 'en-US', 'Not specified')}</td>
                 </tr>
                 ` : ''}
               </table>
@@ -103,8 +105,20 @@ New Announcement: ${title}
 ${description}
 
 Category: ${category}
-${expiryDate ? `Expiry Date: ${formatDate(expiryDate)}` : ''}
-${scheduledAt ? `Scheduled For: ${formatDate(scheduledAt)}` : ''}
+${expiryDate ? `Expiry Date: ${formatDateTime(expiryDate, {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+}, 'en-US', 'Not specified')}` : ''}
+${scheduledAt ? `Scheduled For: ${formatDateTime(scheduledAt, {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+}, 'en-US', 'Not specified')}` : ''}
 
 View all announcements: ${cfg.frontendUrl}
 

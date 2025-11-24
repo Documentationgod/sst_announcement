@@ -1,6 +1,16 @@
 /**
  * Check if an announcement has expired
  */
+const DEFAULT_TIMEZONE = process.env.NEXT_PUBLIC_DEFAULT_TIMEZONE || 'Asia/Kolkata';
+const DEFAULT_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
+};
+
 export const isAnnouncementExpired = (announcement: { expiry_date?: string | null }): boolean => {
   if (!announcement.expiry_date) return false
   
@@ -30,5 +40,29 @@ export const formatDateForInput = (dateString?: string | null): string => {
     return `${year}-${month}-${day}T${hours}:${minutes}`
   } catch (error) {
     return ''
+  }
+}
+
+export const getDefaultTimeZone = () => DEFAULT_TIMEZONE
+
+export const formatDateTime = (
+  value?: string | number | Date | null,
+  options: Intl.DateTimeFormatOptions = DEFAULT_FORMAT_OPTIONS,
+  locale = 'en-US',
+  fallback = 'Unknown date'
+): string => {
+  if (!value) return fallback
+
+  const date = value instanceof Date ? value : new Date(value)
+  if (isNaN(date.getTime())) return fallback
+
+  try {
+    const formatter = new Intl.DateTimeFormat(locale, {
+      timeZone: DEFAULT_TIMEZONE,
+      ...options,
+    })
+    return formatter.format(date)
+  } catch (error) {
+    return fallback
   }
 }

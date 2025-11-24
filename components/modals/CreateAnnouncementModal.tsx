@@ -5,6 +5,7 @@ import { CATEGORY_OPTIONS } from '../../constants/categories';
 import { useAppUser } from '../../contexts/AppUserContext';
 import { getPriorityForCategory, priorityToNumber, numberToPriority, getPriorityDisplayName, getPriorityExamples } from '../../utils/priorityMapping';
 import { getMaxPriorityForRole, getMaxPriorityNumberForRole, canSetPriorityLevel, normalizeUserRole, hasAdminAccess } from '../../utils/announcementUtils';
+import { formatDateTime } from '../../utils/dateUtils';
 
 const DEFAULT_FORM_STATE: CreateAnnouncementData = {
   title: '',
@@ -309,8 +310,8 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
               
               <p className="text-xs text-red-100">
                 Will expire completely on{' '}
-                {variant === 'emergency' 
-                  ? new Date(Date.now() + priorityDurationHours * 60 * 60 * 1000).toLocaleString(undefined, {
+                {variant === 'emergency'
+                  ? formatDateTime(Date.now() + priorityDurationHours * 60 * 60 * 1000, {
                       hour: '2-digit',
                       minute: '2-digit',
                       month: 'short',
@@ -319,12 +320,12 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
                   : (() => {
                       const now = new Date();
                       const expiresAt = new Date(now.getTime() + emergencyDurationHours * 60 * 60 * 1000);
-                      return expiresAt.toLocaleString('en-US', {
+                      return formatDateTime(expiresAt, {
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric',
                         hour: '2-digit',
-                        minute: '2-digit'
+                        minute: '2-digit',
                       });
                     })()}
               </p>
