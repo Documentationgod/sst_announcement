@@ -3,6 +3,8 @@ import { Button } from '../ui/button';
 import type { CreateAnnouncementData } from '../../types';
 import { CATEGORY_OPTIONS } from '../../constants/categories';
 import { useAppUser } from '../../contexts/AppUserContext';
+import { getPriorityForCategory, priorityToNumber, numberToPriority, getPriorityDisplayName, getPriorityExamples } from '../../utils/priorityMapping';
+import { getMaxPriorityForRole, getMaxPriorityNumberForRole, canSetPriorityLevel, normalizeUserRole, hasAdminAccess } from '../../utils/announcementUtils';
 
 const DEFAULT_FORM_STATE: CreateAnnouncementData = {
   title: '',
@@ -17,6 +19,7 @@ const DEFAULT_FORM_STATE: CreateAnnouncementData = {
   send_tv: false,
   priority_until: null,
   is_emergency: false,
+  priority_level: 3, 
 };
 
 const PRIORITY_DURATION_OPTIONS = [1, 2, 4, 6, 12, 24];
@@ -41,7 +44,12 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
   emergencyMode = false,
 }) => {
   const { user } = useAppUser();
-  const isSuperAdmin = user?.role === 'super_admin';
+  const normalizedRole = normalizeUserRole(user?.role, user?.is_admin);
+  const isSuperAdmin = normalizedRole === 'super_admin';
+  const hasAdmin = hasAdminAccess(normalizedRole);
+  const userRole = normalizedRole;
+  const maxPriority = getMaxPriorityForRole(userRole);
+  const maxPriorityNum = getMaxPriorityNumberForRole(userRole);
   
   const [formData, setFormData] = useState<CreateAnnouncementData>(DEFAULT_FORM_STATE);
   const [priorityDurationHours, setPriorityDurationHours] = useState<number>(2);
@@ -65,34 +73,43 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
       dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
       dayAfterTomorrow.setHours(0, 0, 0, 0);
       
-      // Format for datetime-local input (YYYY-MM-DDTHH:mm) in local time
       const dayAfterTomorrowFormatted = formatToLocalDateTime(dayAfterTomorrow);
       
-      // Set minimum date (day after tomorrow) for validation
       setMinScheduledDate(dayAfterTomorrowFormatted);
+      
+      const initialCategory = initialData?.category || 'college';
+      const autoPriority = getPriorityForCategory(initialCategory);
+      const autoPriorityNum = priorityToNumber(autoPriority);
       
       setFormData({
         ...DEFAULT_FORM_STATE,
         ...(initialData || {}),
         is_emergency: isEmergencyVariant,
-        // Set scheduled_at to day after tomorrow at midnight if not in emergency mode and not already set
+        priority_level: initialData?.priority_level ?? autoPriorityNum,
         scheduled_at: isEmergencyVariant ? '' : (initialData?.scheduled_at || dayAfterTomorrowFormatted),
       });
       setPriorityDurationHours(2);
       setEmergencyDurationHours(4);
     }
   }, [isOpen, initialData, isEmergencyVariant]);
-
-  // Clear scheduled_at for regular admins (they can't schedule - superadmin will do it)
-  // Emergency announcements are immediate, so clear scheduled_at in emergency mode
+  
   useEffect(() => {
-    if (isOpen && !isSuperAdmin && formData.scheduled_at) {
-      setFormData(prev => ({ ...prev, scheduled_at: '' }));
+    if (formData.category && !isEmergencyVariant) {
+      const autoPriority = getPriorityForCategory(formData.category);
+      const autoPriorityNum = priorityToNumber(autoPriority);
+      if (canSetPriorityLevel(userRole, autoPriorityNum)) {
+        setFormData(prev => ({ ...prev, priority_level: autoPriorityNum }));
+      } else {
+        setFormData(prev => ({ ...prev, priority_level: maxPriorityNum }));
+      }
     }
+  }, [formData.category, userRole, maxPriorityNum, isEmergencyVariant]);
+
+  useEffect(() => {
     if (isOpen && isEmergencyVariant && formData.scheduled_at) {
-      setFormData(prev => ({ ...prev, scheduled_at: '' })); // Emergency announcements are immediate
+      setFormData(prev => ({ ...prev, scheduled_at: '' })); 
     }
-  }, [isOpen, isSuperAdmin, isEmergencyVariant, formData.scheduled_at]);
+  }, [isOpen, isEmergencyVariant, formData.scheduled_at]);
 
   if (!isOpen) return null;
 
@@ -101,11 +118,11 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
     
     let submission: CreateAnnouncementData = {
       ...formData,
+      priority_level: formData.priority_level ?? 3, 
     };
 
     if (isEmergencyVariant) {
       if (variant === 'emergency') {
-        // Priority-based emergency (HEAD version)
         const priorityExpiresAt = new Date(Date.now() + priorityDurationHours * 60 * 60 * 1000);
         submission.priority_until = priorityExpiresAt.toISOString();
         submission.expiry_date = priorityExpiresAt.toISOString();
@@ -113,8 +130,8 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
         submission.send_email = true;
         submission.send_tv = true;
         submission.is_active = true;
+        submission.priority_level = 0; 
       } else {
-        // Emergency mode (main version)
         const now = new Date();
         const expiresAt = new Date(now.getTime() + emergencyDurationHours * 60 * 60 * 1000);
         submission = {
@@ -125,10 +142,15 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
           scheduled_at: '',
           expiry_date: '',
           reminder_time: '',
+          priority_level: 0, 
         };
       }
     } else {
       submission.priority_until = submission.priority_until || null;
+      const requestedPriority = submission.priority_level ?? 3;
+      if (!canSetPriorityLevel(userRole, requestedPriority)) {
+        submission.priority_level = maxPriorityNum; 
+      }
     }
 
     await onSubmit(submission);
@@ -143,7 +165,6 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="bg-black rounded-3xl border border-gray-900 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden m-4 animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 flex flex-col">
-        {/* Enhanced Header */}
         <div className={`relative p-6 border-b border-gray-900 ${isEmergencyVariant ? 'bg-gradient-to-r from-red-900/40 via-red-900/10 to-black' : 'bg-black'}`}>
           <div className="relative flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -189,9 +210,7 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
           </div>
         </div>
 
-        {/* Enhanced Form Content */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6 bg-black custom-scrollbar">
-          {/* Title Section */}
           <div className="space-y-2">
             <label className="flex items-center gap-2 text-sm font-semibold text-gray-300">
               <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -209,7 +228,6 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
             />
           </div>
 
-          {/* Description Section */}
           <div className="space-y-2">
             <label className="flex items-center gap-2 text-sm font-semibold text-gray-300">
               <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -228,7 +246,6 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
             <p className="text-xs text-gray-500">{formData.description.length} characters</p>
           </div>
 
-          {/* Emergency Duration Section */}
           {isEmergencyVariant && (
             <div className="space-y-3 rounded-2xl border border-red-800/50 bg-red-900/10 p-4">
               <label className="flex items-center gap-2 text-sm font-semibold text-red-200">
@@ -314,7 +331,6 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
             </div>
           )}
 
-          {/* Category Section */}
           <div className="space-y-2">
             <label className="flex items-center gap-2 text-sm font-semibold text-gray-300">
               <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -335,7 +351,6 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
             </select>
           </div>
 
-          {/* Date & Time Section - Hidden in emergency mode */}
           {!isEmergencyVariant && (
             <div className="space-y-4">
               <label className="flex items-center gap-2 text-sm font-semibold text-gray-300">
@@ -359,7 +374,7 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
                     className="w-full px-4 py-2.5 bg-gray-800/80 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all duration-200 hover:border-gray-600"
                   />
                 </div>
-                {isSuperAdmin && (
+                {hasAdmin && (
                   <div className="space-y-2">
                     <label className="flex items-center gap-1.5 text-xs font-medium text-gray-400">
                       <svg className="w-3.5 h-3.5 text-cyan-500/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -373,7 +388,6 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
                       onChange={(e) => {
                         const value = e.target.value;
                         if (value) {
-                          // Parse the datetime-local value and ensure time is always set to midnight (00:00)
                           const [datePart] = value.split('T');
                           const formattedValue = `${datePart}T00:00`;
                           setFormData({ ...formData, scheduled_at: formattedValue });
@@ -382,7 +396,6 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
                         }
                       }}
                       onBlur={(e) => {
-                        // Ensure time is midnight when user finishes editing
                         const value = e.target.value;
                         if (value) {
                           const [datePart] = value.split('T');
@@ -414,8 +427,6 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
               </div>
             </div>
           )}
-
-          {/* Settings Section */}
           <div className="space-y-3">
             <label className="flex items-center gap-2 text-sm font-semibold text-gray-300">
               <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -426,7 +437,6 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
             </label>
             
             <div className="bg-gray-900/30 border border-gray-800/50 rounded-xl p-4 space-y-4">
-              {/* Active Toggle */}
               <div className="flex items-center justify-between group">
                 <div className="flex items-center gap-3">
                   <div className={`p-2 rounded-lg transition-colors duration-200 ${
@@ -481,10 +491,8 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
                 </label>
               </div>
 
-              {/* Divider */}
               <div className="h-px bg-gray-800/50"></div>
 
-              {/* Email Notification Toggle */}
               <div className="flex items-center justify-between group">
                 <div className="flex items-center gap-3">
                   <div className={`p-2 rounded-lg transition-colors duration-200 ${
@@ -532,7 +540,6 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
                 </label>
               </div>
 
-              {/* TV Notification Toggle */}
               <div className="flex items-center justify-between group">
                 <div className="flex items-center gap-3">
                   <div className={`p-2 rounded-lg transition-colors duration-200 ${

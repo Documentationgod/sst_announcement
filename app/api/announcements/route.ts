@@ -4,23 +4,23 @@ import { fetchAllAnnouncements, mapAnnouncement } from '@/lib/data/announcements
 import { requireAuth, requireAdmin } from '@/lib/middleware/auth';
 import { requireAllowedDomain } from '@/lib/middleware/domain';
 import { validateAnnouncement } from '@/lib/utils/validation';
-import { BadRequestError } from '@/lib/utils/errors';
+import { BadRequestError, formatErrorResponse } from '@/lib/utils/errors';
 import { getDb, getPool } from '@/lib/config/db';
 import { announcements } from '@/lib/schema';
-import { getAllUsers } from '@/lib/data/users';
 import { sendAnnouncementEmail } from '@/lib/services/email';
 import { eq, sql } from 'drizzle-orm';
+import { normalizeUserRole } from '@/lib/utils/roleUtils';
+import { getAnnouncementPriority } from '@/utils/announcementUtils';
+import type { UserRole } from '@/utils/announcementUtils';
 
 export async function GET(request: NextRequest) {
   try {
     await applyRateLimit(request, generalLimiterOptions);
     
-    // Parse pagination params
     const { searchParams } = new URL(request.url);
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!, 10) : undefined;
     const offset = searchParams.get('offset') ? parseInt(searchParams.get('offset')!, 10) : undefined;
     
-    // Validate pagination
     const validLimit = limit && limit > 0 && limit <= 100 ? limit : undefined;
     const validOffset = offset && offset >= 0 ? offset : undefined;
     
@@ -32,13 +32,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, data });
 
   } catch (error: any) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: error.message || 'Internal server error',
-      },
-      { status: error.status || 500 }
-    );
+    console.error('[GET] /api/announcements error:', error);
+    const status = error?.statusCode || error?.status || 500;
+    return NextResponse.json(formatErrorResponse(error), { status });
   }
 }
 
@@ -66,6 +62,7 @@ export async function POST(request: NextRequest) {
       scheduled_at,
       reminder_time,
       priority_until,
+      priority_level = 3, // Default to P3
       is_active = true,
       status = 'active',
       send_email = false,
@@ -79,32 +76,60 @@ export async function POST(request: NextRequest) {
     const priorityUntilRaw = priority_until ? new Date(priority_until) : null;
     const scheduledDate = scheduledDateRaw && !isNaN(scheduledDateRaw.getTime()) ? scheduledDateRaw : null;
     const priorityUntilDate = priorityUntilRaw && !isNaN(priorityUntilRaw.getTime()) ? priorityUntilRaw : null;
-    const isScheduled = scheduledDate ? scheduledDate > now : false;
     const hasPriorityWindow = priorityUntilDate ? priorityUntilDate > now : false;
+    
+    // Validate priority_level (0-3, where 0=P0, 1=P1, 2=P2, 3=P3)
+    const validPriorityLevel = Math.max(0, Math.min(3, priority_level ?? 3));
+    const userRole = normalizeUserRole(user.role, user.is_admin);
+
+    let resolvedScheduledDate = scheduledDate;
+    let autoRescheduled = false;
+    let pendingScheduleAdjustments: ScheduleAdjustment[] = [];
+
+    // Automatically resolve schedule conflicts by finding the next available slot
+    if (scheduledDate) {
+      if (userRole === 'super_admin') {
+        const reflowResult = await reflowSchedulesForSuperAdmin(scheduledDate, validPriorityLevel, userRole);
+        resolvedScheduledDate = reflowResult.scheduledAt;
+        autoRescheduled = reflowResult.autoAdjusted;
+        pendingScheduleAdjustments = reflowResult.adjustments;
+      } else {
+        const scheduleResult = await findNextAvailableScheduleSlot(scheduledDate);
+        resolvedScheduledDate = scheduleResult.scheduledAt;
+        autoRescheduled = scheduleResult.autoAdjusted;
+      }
+    }
+
+    const isScheduled = resolvedScheduledDate ? resolvedScheduledDate > now : false;
     
     // Use 'urgent' for emergency announcements, but fallback to 'active' if enum doesn't support it
     const finalStatus = hasPriorityWindow ? 'urgent' : isScheduled ? 'scheduled' : status;
     const finalIsActive = isScheduled ? false : hasPriorityWindow ? true : is_active;
-
+    
     const announcementValues: any = {
       title,
       description,
       category,
       authorId: user.id,
       expiryDate: expiry_date ? new Date(expiry_date) : null,
-      scheduledAt: scheduled_at ? new Date(scheduled_at) : null,
+      scheduledAt: resolvedScheduledDate ? new Date(resolvedScheduledDate) : null,
       reminderTime: reminder_time ? new Date(reminder_time) : null,
       isActive: finalIsActive,
       status: finalStatus,
       sendEmail: send_email,
       emailSent: false,
       sendTV: send_tv,
+      priorityLevel: validPriorityLevel,
     };
     if (prioritySupported) {
       announcementValues.priorityUntil = priorityUntilDate;
     }
 
     const record = await insertAnnouncementWithFallback(db, announcementValues, prioritySupported);
+
+    if (pendingScheduleAdjustments.length > 0) {
+      await applyScheduleAdjustments(db, pendingScheduleAdjustments);
+    }
 
     let emailSent = false;
     let emailMessage: string | null = null;
@@ -120,7 +145,7 @@ export async function POST(request: NextRequest) {
             category,
             recipientEmails: emails,
             expiryDate: expiry_date || null,
-            scheduledAt: scheduled_at || null,
+            scheduledAt: resolvedScheduledDate?.toISOString() || null,
           });
           emailSent = result.success;
           emailMessage = result.message || result.error || null;
@@ -143,17 +168,176 @@ export async function POST(request: NextRequest) {
         announcement: mapAnnouncement(record),
         emailSent,
         emailMessage,
+        autoRescheduled: autoRescheduled
+          ? {
+              original: scheduled_at,
+              scheduled_for: resolvedScheduledDate?.toISOString() || null,
+            }
+          : null,
       },
     }, { status: 201 });
 
   } catch (error: any) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: error.message || 'Internal server error',
-      },
-      { status: error.status || 500 }
-    );
+    console.error('[POST] /api/announcements error:', error);
+    const status = error?.statusCode || error?.status || 500;
+    return NextResponse.json(formatErrorResponse(error), { status });
+  }
+}
+
+const SLOT_INTERVAL_MINUTES = 5;
+
+type ScheduleResolutionResult = {
+  scheduledAt: Date;
+  autoAdjusted: boolean;
+};
+
+type ScheduleAdjustment = {
+  id: number;
+  newTime: Date;
+};
+
+type DetailedConflictRecord = {
+  id: number;
+  title: string | null;
+  scheduled_at: string | null;
+  priority_level: number | null;
+  author_role: string | null;
+};
+
+async function findNextAvailableScheduleSlot(
+  desiredDate: Date
+): Promise<ScheduleResolutionResult> {
+  const maxIterations = 180; // Search up to 3 hours ahead (minute granularity)
+  const normalizedDesired = new Date(desiredDate);
+  normalizedDesired.setSeconds(0, 0);
+  let candidate = new Date(normalizedDesired);
+
+  for (let i = 0; i < maxIterations; i++) {
+    const minuteStart = new Date(candidate);
+    const minuteEnd = new Date(minuteStart);
+    minuteEnd.setMinutes(minuteEnd.getMinutes() + SLOT_INTERVAL_MINUTES);
+
+    const conflicts = await fetchConflictsForRange(minuteStart, minuteEnd);
+
+    if (!conflicts.length) {
+      return {
+        scheduledAt: minuteStart,
+        autoAdjusted: minuteStart.getTime() !== normalizedDesired.getTime(),
+      };
+    }
+
+    candidate = minuteEnd;
+  }
+
+  throw new BadRequestError(
+    'Unable to automatically find an available time slot within the next 3 hours. Please choose a different scheduled time.'
+  );
+}
+
+async function reflowSchedulesForSuperAdmin(
+  desiredDate: Date,
+  newAnnouncementPriority: number,
+  userRole: UserRole
+): Promise<ScheduleResolutionResult & { adjustments: ScheduleAdjustment[] }> {
+  const normalizedDesired = new Date(desiredDate);
+  normalizedDesired.setSeconds(0, 0);
+
+  const windowEnd = new Date(normalizedDesired);
+  windowEnd.setMinutes(windowEnd.getMinutes() + SLOT_INTERVAL_MINUTES);
+
+  const conflicts = await fetchConflictsForRange(normalizedDesired, windowEnd);
+
+  if (conflicts.length === 0) {
+    return {
+      scheduledAt: normalizedDesired,
+      autoAdjusted: normalizedDesired.getTime() !== desiredDate.setSeconds(0, 0),
+      adjustments: [],
+    };
+  }
+
+  const rolePriority = getAnnouncementPriority(userRole);
+  const records = [
+    ...conflicts.map(conflict => ({
+      id: conflict.id,
+      priorityLevel: conflict.priority_level ?? 3,
+      rolePriority: getAnnouncementPriority(
+        normalizeUserRole(conflict.author_role ?? undefined, undefined)
+      ),
+      scheduledAt: conflict.scheduled_at ? new Date(conflict.scheduled_at) : null,
+    })),
+    {
+      id: null,
+      priorityLevel: newAnnouncementPriority,
+      rolePriority,
+      scheduledAt: normalizedDesired,
+    },
+  ];
+
+  records.sort((a, b) => {
+    if (a.priorityLevel !== b.priorityLevel) {
+      return a.priorityLevel - b.priorityLevel;
+    }
+    return b.rolePriority - a.rolePriority;
+  });
+
+  const adjustments: ScheduleAdjustment[] = [];
+  let cursor = new Date(normalizedDesired);
+  cursor.setSeconds(0, 0);
+  let assignedNewAnnouncementTime = new Date(cursor);
+
+  for (const record of records) {
+    if (record.id === null) {
+      assignedNewAnnouncementTime = new Date(cursor);
+    } else {
+      if (!record.scheduledAt || record.scheduledAt.getTime() !== cursor.getTime()) {
+        adjustments.push({ id: record.id, newTime: new Date(cursor) });
+      }
+    }
+
+    cursor = new Date(cursor);
+    cursor.setMinutes(cursor.getMinutes() + SLOT_INTERVAL_MINUTES);
+  }
+
+  const autoAdjusted =
+    assignedNewAnnouncementTime.getTime() !== normalizedDesired.getTime() || adjustments.length > 0;
+
+  return {
+    scheduledAt: assignedNewAnnouncementTime,
+    autoAdjusted,
+    adjustments,
+  };
+}
+
+async function fetchConflictsForRange(start: Date, end: Date): Promise<DetailedConflictRecord[]> {
+  const pool = getPool();
+  const result = await pool.query({
+    text: `
+      SELECT a.id, a.title, a.priority_level, a.scheduled_at, u.role AS author_role
+      FROM announcements a
+      LEFT JOIN users u ON a.author_id = u.id
+      WHERE a.scheduled_at IS NOT NULL
+        AND a.scheduled_at >= $1
+        AND a.scheduled_at < $2
+        AND a.status IN ('scheduled', 'under_review', 'active')
+    `,
+    values: [start.toISOString(), end.toISOString()],
+  });
+
+  return result.rows || [];
+}
+
+async function applyScheduleAdjustments(
+  db: ReturnType<typeof getDb>,
+  adjustments: ScheduleAdjustment[]
+) {
+  for (const adjustment of adjustments) {
+    await db
+      .update(announcements)
+      .set({
+        scheduledAt: adjustment.newTime,
+        updatedAt: new Date(),
+      })
+      .where(eq(announcements.id, adjustment.id));
   }
 }
 
@@ -292,6 +476,7 @@ async function insertAnnouncementWithFallback(
   
   // Use 'active' instead of 'urgent' if enum doesn't support it
   const insertStatus = values.status === 'urgent' ? 'active' : (values.status ?? 'active');
+  const priorityLevel = values.priorityLevel ?? 3;
   
   try {
     const manualInsert = await pool.query({
@@ -308,8 +493,9 @@ async function insertAnnouncementWithFallback(
           status,
           send_email,
           email_sent,
-          send_tv
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          send_tv,
+          priority_level
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         RETURNING *
       `,
       values: [
@@ -325,6 +511,7 @@ async function insertAnnouncementWithFallback(
         values.sendEmail ?? false,
         values.emailSent ?? false,
         values.sendTV ?? false,
+        priorityLevel,
       ],
     });
     
@@ -351,8 +538,9 @@ async function insertAnnouncementWithFallback(
             status,
             send_email,
             email_sent,
-            send_tv
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            send_tv,
+            priority_level
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
           RETURNING *
         `,
         values: [
@@ -368,6 +556,7 @@ async function insertAnnouncementWithFallback(
           values.sendEmail ?? false,
           values.emailSent ?? false,
           values.sendTV ?? false,
+          priorityLevel,
         ],
       });
       
@@ -420,5 +609,6 @@ function mapRowToAnnouncement(row: any): typeof announcements.$inferSelect {
     emailSent: row.email_sent ?? false,
     sendTV: row.send_tv ?? false,
     priorityUntil: null, // Not supported in manual insert fallback
+    priorityLevel: row.priority_level ?? 3,
   } as typeof announcements.$inferSelect;
 }

@@ -24,6 +24,7 @@ export function mapAnnouncement(record: AnnouncementRecord) {
     email_sent: record.emailSent,
     send_tv: record.sendTV,
     priority_until: record.priorityUntil,
+    priority_level: record.priorityLevel ?? 3,
   };
 }
 

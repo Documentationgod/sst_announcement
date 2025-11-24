@@ -21,6 +21,7 @@ export interface Announcement {
   is_emergency?: boolean
   emergency_expires_at?: string | null
   visible_after?: string | null
+  priority_level?: number 
 }
 
 export interface User {
@@ -47,7 +48,8 @@ export interface CreateAnnouncementData {
   send_tv?: boolean
   priority_until?: string | null
   is_emergency?: boolean
-  emergency_expires_at?: string // ISO string for emergency expiration time
+  emergency_expires_at?: string 
+  priority_level?: number 
 }
 
 export interface ReviewAction {
@@ -64,6 +66,7 @@ export interface UpdateAnnouncementData {
   is_active?: boolean
   status?: string
   priority_until?: string | null
+  priority_level?: number 
 }
 
 export interface ApiResponse<T> {

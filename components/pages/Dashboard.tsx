@@ -247,16 +247,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
   }, [showNotifications]);
 
   const getCategoryColor = (category: string) => {
-    switch (category.toLowerCase()) {
-      case 'college':
-        return 'default';
-      case 'tech':
-      case 'tech-events':
-      case 'tech-workshops':
-        return 'secondary';
-      default:
-        return 'outline';
+    const normalized = category.toLowerCase();
+    if (['college', 'sports'].includes(normalized)) {
+      return 'default';
     }
+    if (['tech', 'tech-events', 'tech-workshops', 'cultural','academic'].includes(normalized)) {
+      return 'secondary';
+    }
+    return 'outline';
   };
 
   return (
@@ -650,7 +648,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                                               : 'bg-slate-500/30 text-slate-200 border border-slate-500/50 px-3 py-1 text-xs font-bold capitalize'
                                           }
                                         >
-                                          {a.status}
+                                          {a.status === 'scheduled' && a.scheduled_at
+                                            ? `Scheduled: ${new Date(a.scheduled_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}`
+                                            : a.status}
                                         </Badge>
                                       )}
                                     </>
@@ -662,7 +662,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                                   </Badge>
                                   <span className="text-gray-500">•</span>
                                   <span className="text-sm text-gray-400">
-                                    {a.created_at ? new Date(a.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Unknown date'}
+                                    {a.created_at ? new Date(a.created_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : 'Unknown date'}
                                   </span>
                                 </div>
                                 {isPriorityActive && (

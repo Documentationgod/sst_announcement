@@ -261,6 +261,7 @@ sst_announcement/
 - `email_sent` - Whether email was sent (boolean, default: false, not null)
 - `send_tv` - Whether to display on TV screens (boolean, default: false, not null)
 - `priority_until` - Priority expiration timestamp (with timezone)
+- `priority_level` - Priority level (integer, default: 3): `0`=P0 (Highest), `1`=P1 (High), `2`=P2 (Medium), `3`=P3 (Normal)
 - `is_emergency` - Emergency flag (boolean, default: false, not null)
 - `emergency_expires_at` - Emergency expiration (with timezone)
 - `visible_after` - Visibility start time (with timezone)

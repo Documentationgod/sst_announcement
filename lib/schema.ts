@@ -45,6 +45,7 @@ export const announcements = pgTable('announcements', {
   isEmergency: boolean('is_emergency').default(false).notNull(),
   emergencyExpiresAt: timestamp('emergency_expires_at', { withTimezone: true }),
   visibleAfter: timestamp('visible_after', { withTimezone: true }),
+  priorityLevel: integer('priority_level').default(3).notNull(), // P0=0, P1=1, P2=2, P3=3
 });
 
 export const announcementEngagements = pgTable('announcement_engagements', {
