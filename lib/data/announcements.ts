@@ -27,6 +27,8 @@ export function mapAnnouncement(record: AnnouncementRecord) {
     send_tv: record.sendTV,
     priority_until: record.priorityUntil,
     priority_level: record.priorityLevel ?? 3,
+    is_emergency: record.isEmergency ?? false,
+    emergency_expires_at: record.emergencyExpiresAt,
     target_years: targetYears,
   };
 }

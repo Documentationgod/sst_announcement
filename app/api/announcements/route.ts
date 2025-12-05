@@ -86,6 +86,8 @@ export async function POST(request: NextRequest) {
       send_email = false,
       send_tv = false,
       target_years = null,
+      is_emergency = false,
+      emergency_expires_at = null,
     } = body;
 
     const db = getDb();
@@ -95,19 +97,23 @@ export async function POST(request: NextRequest) {
     const scheduledDateRaw = scheduled_at ? new Date(scheduled_at) : null;
     const priorityUntilRaw = priority_until ? new Date(priority_until) : null;
     const scheduledDate = scheduledDateRaw && !isNaN(scheduledDateRaw.getTime()) ? scheduledDateRaw : null;
-    const priorityUntilDate = priorityUntilRaw && !isNaN(priorityUntilRaw.getTime()) ? priorityUntilRaw : null;
+    let priorityUntilDate = priorityUntilRaw && !isNaN(priorityUntilRaw.getTime()) ? priorityUntilRaw : null;
     const hasPriorityWindow = priorityUntilDate ? priorityUntilDate > now : false;
     
     // Validate priority_level (0-3, where 0=P0, 1=P1, 2=P2, 3=P3)
     const validPriorityLevel = Math.max(0, Math.min(3, priority_level ?? 3));
     const userRole = normalizeUserRole(user.role, user.is_admin);
+    
+    // Check if this is an emergency announcement
+    const isEmergencyAnnouncement = is_emergency || false;
 
     let resolvedScheduledDate = scheduledDate;
     let autoRescheduled = false;
     let pendingScheduleAdjustments: ScheduleAdjustment[] = [];
 
-    // Automatically resolve schedule conflicts by finding the next available slot
-    if (scheduledDate) {
+    // Emergency announcements bypass scheduling - they are immediate
+    // Only process scheduling for non-emergency announcements
+    if (scheduledDate && !isEmergencyAnnouncement) {
       if (userRole === 'super_admin') {
         const reflowResult = await reflowSchedulesForSuperAdmin(scheduledDate, validPriorityLevel, userRole);
         resolvedScheduledDate = reflowResult.scheduledAt;
@@ -118,30 +124,58 @@ export async function POST(request: NextRequest) {
         resolvedScheduledDate = scheduleResult.scheduledAt;
         autoRescheduled = scheduleResult.autoAdjusted;
       }
+    } else if (isEmergencyAnnouncement && scheduledDate) {
+      resolvedScheduledDate = null;
+      console.warn('Emergency announcement cannot be scheduled - clearing scheduled_at');
     }
 
-    const isScheduled = resolvedScheduledDate ? resolvedScheduledDate > now : false;
-    
-    // Use 'urgent' for emergency announcements, but fallback to 'active' if enum doesn't support it
-    const finalStatus = hasPriorityWindow ? 'urgent' : isScheduled ? 'scheduled' : status;
-    const finalIsActive = isScheduled ? false : hasPriorityWindow ? true : is_active;
-    
     const normalizedTargetYears = normalizeTargetYears(target_years);
+
+    const emergencyExpiresAtRaw = emergency_expires_at ? new Date(emergency_expires_at) : null;
+    const emergencyExpiresAtDate = emergencyExpiresAtRaw && !isNaN(emergencyExpiresAtRaw.getTime()) ? emergencyExpiresAtRaw : null;
+    
+    let finalStatus: string;
+    let finalIsActive: boolean;
+    let finalScheduledAt: Date | null = null;
+    let finalPriorityLevel: number;
+    let finalExpiryDate: Date | null = null;
+    
+    if (isEmergencyAnnouncement) {
+      finalStatus = 'active';
+      finalIsActive = true;
+      finalScheduledAt = null; // Emergency announcements are immediate
+      finalPriorityLevel = 0; // P0 - highest priority
+      finalExpiryDate = emergencyExpiresAtDate || (expiry_date ? new Date(expiry_date) : null);
+      // Keep emergency "on top" for the emergency window; if a window is provided, reuse it as priority window
+      if (!priorityUntilDate && emergencyExpiresAtDate) {
+        priorityUntilDate = emergencyExpiresAtDate;
+      }
+    } else {
+      // Regular announcements follow normal logic
+      const isScheduled = resolvedScheduledDate ? resolvedScheduledDate > now : false;
+      finalStatus = hasPriorityWindow ? 'urgent' : isScheduled ? 'scheduled' : status;
+      finalIsActive = isScheduled ? false : hasPriorityWindow ? true : is_active;
+      finalScheduledAt = resolvedScheduledDate ? new Date(resolvedScheduledDate) : null;
+      finalPriorityLevel = validPriorityLevel;
+      finalExpiryDate = expiry_date ? new Date(expiry_date) : null;
+    }
 
     const announcementValues: any = {
       title,
       description,
       category,
       authorId: user.id,
-      expiryDate: expiry_date ? new Date(expiry_date) : null,
-      scheduledAt: resolvedScheduledDate ? new Date(resolvedScheduledDate) : null,
+      expiryDate: finalExpiryDate,
+      scheduledAt: finalScheduledAt,
       reminderTime: reminder_time ? new Date(reminder_time) : null,
       isActive: finalIsActive,
       status: finalStatus,
       sendEmail: send_email,
       emailSent: false,
       sendTV: send_tv,
-      priorityLevel: validPriorityLevel,
+      priorityLevel: finalPriorityLevel,
+      isEmergency: isEmergencyAnnouncement,
+      emergencyExpiresAt: emergencyExpiresAtDate,
     };
     if (prioritySupported) {
       announcementValues.priorityUntil = priorityUntilDate;
@@ -162,7 +196,11 @@ export async function POST(request: NextRequest) {
     let emailSent = false;
     let emailMessage: string | null = null;
 
-    if (send_email && !isScheduled) {
+    // Emergency announcements can always send emails immediately (they're never scheduled)
+    // Regular announcements can send if not scheduled
+    const canSendEmail = isEmergencyAnnouncement ? true : !(finalScheduledAt && finalScheduledAt > now);
+
+    if (send_email && canSendEmail) {
       try {
         const emails = await resolveRecipientEmails(normalizedTargetYears);
         if (emails.length > 0) {
@@ -171,8 +209,8 @@ export async function POST(request: NextRequest) {
             description,
             category,
             recipientEmails: emails,
-            expiryDate: expiry_date || null,
-            scheduledAt: resolvedScheduledDate?.toISOString() || null,
+            expiryDate: finalExpiryDate?.toISOString() || null,
+            scheduledAt: finalScheduledAt?.toISOString() || null,
           });
           emailSent = result.success;
           emailMessage = result.message || result.error || null;
@@ -197,10 +235,10 @@ export async function POST(request: NextRequest) {
         announcement: mapAnnouncement(record),
         emailSent,
         emailMessage,
-        autoRescheduled: autoRescheduled
+        autoRescheduled: autoRescheduled && !isEmergencyAnnouncement
           ? {
               original: scheduled_at,
-              scheduled_for: resolvedScheduledDate?.toISOString() || null,
+              scheduled_for: finalScheduledAt?.toISOString() || null,
             }
           : null,
       },
@@ -395,150 +433,6 @@ async function applyScheduleAdjustments(
   }
 }
 
-// Helper functions (same as original)
-type PriorityColumnState = 'unknown' | 'supported' | 'unsupported';
-let priorityColumnState: PriorityColumnState = 'unknown';
-let urgentStatusEnsured = false;
-let initializationPromise: Promise<void> | null = null;
-type TargetYearsColumnState = 'unknown' | 'supported' | 'unsupported';
-let targetYearsColumnState: TargetYearsColumnState = 'unknown';
-
-async function initializeSchema(): Promise<void> {
-  if (initializationPromise) {
-    return initializationPromise;
-  }
-
-  initializationPromise = (async () => {
-    const db = getDb();
-    await Promise.all([
-      ensurePriorityColumn(db),
-      ensureTargetYearsColumn(db),
-      ensureUrgentStatusEnum(db)
-    ]);
-  })();
-
-  return initializationPromise;
-}
-
-async function ensurePriorityColumn(db: ReturnType<typeof getDb>): Promise<boolean> {
-  if (priorityColumnState === 'supported') return true;
-  if (priorityColumnState === 'unsupported') return false;
-
-  try {
-    // Check if column exists
-    const checkResult: any = await db.execute(sql`
-      SELECT column_name FROM information_schema.columns
-      WHERE table_name = 'announcements' AND column_name = 'priority_until'
-      LIMIT 1
-    `);
-    
-    if (checkResult?.rows?.length > 0) {
-      priorityColumnState = 'supported';
-      return true;
-    }
-
-    // Column doesn't exist, try to add it
-    await db.execute(sql`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS priority_until TIMESTAMPTZ`);
-    
-    // Verify it was added
-    const verifyResult: any = await db.execute(sql`
-      SELECT column_name FROM information_schema.columns
-      WHERE table_name = 'announcements' AND column_name = 'priority_until'
-      LIMIT 1
-    `);
-    
-    if (verifyResult?.rows?.length > 0) {
-      priorityColumnState = 'supported';
-      return true;
-    }
-    
-    // Column still doesn't exist after trying to add it
-    priorityColumnState = 'unsupported';
-    return false;
-  } catch (error) {
-    console.warn('Unable to add/check priority_until column; falling back without priority support', error);
-    priorityColumnState = 'unsupported';
-    return false;
-  }
-}
-
-async function ensureUrgentStatusEnum(db: ReturnType<typeof getDb>): Promise<void> {
-  if (urgentStatusEnsured) return;
-
-  try {
-    // Check if announcement_status enum exists
-    const enumCheck: any = await db.execute(sql`
-      SELECT 1 FROM pg_type WHERE typname = 'announcement_status' LIMIT 1
-    `);
-    
-    if (enumCheck?.rows?.length > 0) {
-      // Enum exists, check if 'urgent' is already in it
-      const urgentCheck: any = await db.execute(sql`
-        SELECT 1 FROM pg_enum 
-        WHERE enumlabel = 'urgent' 
-        AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'announcement_status')
-        LIMIT 1
-      `);
-      
-      if (!urgentCheck?.rows?.length) {
-        // Add 'urgent' to the enum (PostgreSQL doesn't support IF NOT EXISTS for enums)
-        try {
-          await db.execute(sql`ALTER TYPE announcement_status ADD VALUE 'urgent'`);
-        } catch (addError: any) {
-          // If it already exists or fails, that's okay
-          const errorMsg = addError?.message || String(addError);
-          if (!errorMsg.includes('already exists')) {
-            console.warn('Could not add urgent to enum:', errorMsg);
-          }
-        }
-      }
-    }
-    // If enum doesn't exist, status is varchar and 'urgent' will work fine
-    urgentStatusEnsured = true;
-  } catch (error) {
-    // If we can't check/add to enum, status is probably varchar anyway, so 'urgent' should work
-    console.warn('Could not ensure urgent status in enum (may not be needed)', error);
-    urgentStatusEnsured = true; // Mark as done to avoid retrying
-  }
-}
-
-async function ensureTargetYearsColumn(db: ReturnType<typeof getDb>): Promise<boolean> {
-  if (targetYearsColumnState === 'supported') return true;
-  if (targetYearsColumnState === 'unsupported') return false;
-
-  try {
-    const checkResult: any = await db.execute(sql`
-      SELECT column_name FROM information_schema.columns
-      WHERE table_name = 'announcements' AND column_name = 'target_years'
-      LIMIT 1
-    `);
-
-    if (checkResult?.rows?.length > 0) {
-      targetYearsColumnState = 'supported';
-      return true;
-    }
-
-    await db.execute(sql`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS target_years INTEGER[]`);
-
-    const verifyResult: any = await db.execute(sql`
-      SELECT column_name FROM information_schema.columns
-      WHERE table_name = 'announcements' AND column_name = 'target_years'
-      LIMIT 1
-    `);
-
-    if (verifyResult?.rows?.length > 0) {
-      targetYearsColumnState = 'supported';
-      return true;
-    }
-
-    targetYearsColumnState = 'unsupported';
-    return false;
-  } catch (error) {
-    console.warn('Unable to add/check target_years column; continuing without audience filtering', error);
-    targetYearsColumnState = 'unsupported';
-    return false;
-  }
-}
 
 async function insertAnnouncementWithFallback(
   db: ReturnType<typeof getDb>,
@@ -651,6 +545,8 @@ function buildManualInsertStatement(includeTargetYears: boolean): string {
     'email_sent',
     'send_tv',
     'priority_level',
+    'is_emergency',
+    'emergency_expires_at',
   ];
   if (includeTargetYears) {
     columns.push('target_years');
@@ -688,6 +584,8 @@ function buildManualInsertValues({
     values.emailSent ?? false,
     values.sendTV ?? false,
     priorityLevel,
+    values.isEmergency ?? false,
+    values.emergencyExpiresAt ?? null,
   ];
   if (targetYearsValue) {
     params.push(targetYearsValue);
@@ -738,6 +636,8 @@ function mapRowToAnnouncement(row: any): typeof announcements.$inferSelect {
     sendTV: row.send_tv ?? false,
     priorityUntil: null,
     priorityLevel: row.priority_level ?? 3,
+    isEmergency: row.is_emergency ?? false,
+    emergencyExpiresAt: row.emergency_expires_at ?? null,
     targetYears,
   } as typeof announcements.$inferSelect;
 }

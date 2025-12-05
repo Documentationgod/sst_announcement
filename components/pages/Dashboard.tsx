@@ -582,6 +582,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                         priorityUntil > new Date() &&
                         (a.status?.toLowerCase() === 'urgent');
                       const isEmergency = a.is_emergency || false;
+                      const showStatusBadge =
+                        !!a.status &&
+                        a.status.toLowerCase() !== 'approved' &&
+                        !(isEmergency && a.status.toLowerCase() === 'urgent') &&
+                        (user?.is_admin || user?.role === 'super_admin');
 
                       return (
                         <div
@@ -639,7 +644,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                                           🚨 EMERGENCY
                                         </Badge>
                                       )}
-                                      {a.status && a.status !== 'approved' && (user?.is_admin || user?.role === 'super_admin') && (
+                                      {showStatusBadge && (
                                         <Badge
                                           className={
                                             a.status === 'rejected'

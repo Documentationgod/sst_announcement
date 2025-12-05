@@ -74,7 +74,33 @@ export const isVisibleToUser = (
 ): boolean => {
   const hasAdminLevel = hasAdminAccess(userRole)
   const now = new Date()
+  const isEmergency = announcement.is_emergency || false
   
+  // Emergency announcements have special visibility rules
+  if (isEmergency) {
+    // Check if emergency has expired
+    if (announcement.emergency_expires_at) {
+      const emergencyExpiry = new Date(announcement.emergency_expires_at)
+      if (!isNaN(emergencyExpiry.getTime()) && emergencyExpiry < now) {
+        return false // Emergency has expired
+      }
+    }
+    
+    // Emergency announcements bypass scheduled_at and expiry_date checks
+    // But still respect target_years if set
+    if (!hasAdminLevel && !isSuperAdmin) {
+      const targetYears = Array.isArray(announcement.target_years) ? announcement.target_years : null
+      if (targetYears && targetYears.length > 0) {
+        if (!studentIntakeCode || !targetYears.includes(studentIntakeCode)) {
+          return false
+        }
+      }
+    }
+    
+    return true // Emergency announcements are visible until emergency_expires_at
+  }
+  
+  // Regular announcements follow normal visibility rules
   if (!hasAdminLevel && !isSuperAdmin) {
     if (announcement.status === 'scheduled') {
       return false
@@ -117,10 +143,44 @@ export const searchAnnouncements = (announcements: Announcement[], query: string
 }
 
 export const sortAnnouncementsByPriority = (announcements: Announcement[], userRole: UserRole): Announcement[] => {
+  const now = new Date()
+  
   return [...announcements].sort((a, b) => {
-    if (a.is_emergency && !b.is_emergency) return -1
-    if (!a.is_emergency && b.is_emergency) return 1
+    const aIsEmergency = a.is_emergency || false
+    const bIsEmergency = b.is_emergency || false
     
+    // Emergency announcements always come first
+    if (aIsEmergency && !bIsEmergency) return -1
+    if (!aIsEmergency && bIsEmergency) return 1
+    
+    // If both are emergency, sort by emergency_expires_at (active ones first, then by expiry time)
+    if (aIsEmergency && bIsEmergency) {
+      const aEmergencyExpiry = a.emergency_expires_at ? new Date(a.emergency_expires_at) : null
+      const bEmergencyExpiry = b.emergency_expires_at ? new Date(b.emergency_expires_at) : null
+      
+      const aIsActive = !aEmergencyExpiry || aEmergencyExpiry > now
+      const bIsActive = !bEmergencyExpiry || bEmergencyExpiry > now
+      
+      // Active emergencies come before expired ones
+      if (aIsActive && !bIsActive) return -1
+      if (!aIsActive && bIsActive) return 1
+      
+      // Both active or both expired - sort by expiry time (sooner expiry first for active, later expiry first for expired)
+      if (aIsActive && bIsActive) {
+        if (aEmergencyExpiry && bEmergencyExpiry) {
+          return aEmergencyExpiry.getTime() - bEmergencyExpiry.getTime()
+        }
+        if (aEmergencyExpiry) return -1
+        if (bEmergencyExpiry) return 1
+      }
+      
+      // Fallback to creation date for emergencies
+      const aDate = new Date(a.created_at || 0)
+      const bDate = new Date(b.created_at || 0)
+      return bDate.getTime() - aDate.getTime()
+    }
+    
+    // Regular announcements follow normal priority sorting
     const aPriorityNum = a.priority_level ?? 3
     const bPriorityNum = b.priority_level ?? 3
     
@@ -136,13 +196,12 @@ export const sortAnnouncementsByPriority = (announcements: Announcement[], userR
       return (b.id ?? 0) - (a.id ?? 0)
     }
     
-      if (aPriorityNum !== bPriorityNum) {
+    if (aPriorityNum !== bPriorityNum) {
       return aPriorityNum - bPriorityNum 
     }
     
     const aPriorityUntil = a.priority_until ? new Date(a.priority_until) : null
     const bPriorityUntil = b.priority_until ? new Date(b.priority_until) : null
-    const now = new Date()
     
     const aHasPriority = aPriorityUntil && aPriorityUntil > now && a.status === 'urgent'
     const bHasPriority = bPriorityUntil && bPriorityUntil > now && b.status === 'urgent'
