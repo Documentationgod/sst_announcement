@@ -8,11 +8,14 @@ import { BadRequestError, formatErrorResponse } from '@/lib/utils/errors';
 import { getDb, getPool } from '@/lib/config/db';
 import { announcements, users } from '@/lib/schema';
 import { sendAnnouncementEmail } from '@/lib/services/email';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { normalizeUserRole, hasAdminAccess } from '@/lib/utils/roleUtils';
 import { getAnnouncementPriority } from '@/utils/announcementUtils';
 import type { UserRole } from '@/utils/announcementUtils';
 import { getYearMetadataFromEmail, extractIntakeCodeFromEmail } from '@/utils/studentYear';
+
+// Schema helper flags removed; assume schema is ready. Stub state for fallback logic.
+let priorityColumnState: 'supported' | 'unsupported' = 'unsupported';
 
 export async function GET(request: NextRequest) {
   try {
@@ -63,9 +66,6 @@ export async function POST(request: NextRequest) {
     requireAllowedDomain(user);
     requireAdmin(user);
 
-    // Initialize schema once (cached after first call)
-    await initializeSchema();
-
     const body = await request.json();
     const validationErrors = validateAnnouncement(body);
     if (validationErrors.length > 0) {
@@ -91,8 +91,9 @@ export async function POST(request: NextRequest) {
     } = body;
 
     const db = getDb();
-    const prioritySupported = await ensurePriorityColumn(db);
-    const targetYearsSupported = await ensureTargetYearsColumn(db);
+    // Assume schema is already up to date in production
+    const prioritySupported = true;
+    const targetYearsSupported = true;
     const now = new Date();
     const scheduledDateRaw = scheduled_at ? new Date(scheduled_at) : null;
     const priorityUntilRaw = priority_until ? new Date(priority_until) : null;
@@ -111,8 +112,7 @@ export async function POST(request: NextRequest) {
     let autoRescheduled = false;
     let pendingScheduleAdjustments: ScheduleAdjustment[] = [];
 
-    // Emergency announcements bypass scheduling - they are immediate
-    // Only process scheduling for non-emergency announcements
+ 
     if (scheduledDate && !isEmergencyAnnouncement) {
       if (userRole === 'super_admin') {
         const reflowResult = await reflowSchedulesForSuperAdmin(scheduledDate, validPriorityLevel, userRole);
