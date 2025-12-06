@@ -2,9 +2,31 @@
 
 A comprehensive announcement management system for SCALER School of Technology, featuring Clerk authentication, real-time announcements, TV display integration, emergency alerts, email notifications, analytics dashboard, and role-based admin controls.
 
+## 📋 Table of Contents
+
+- [Overview](#-overview)
+- [Features](#-features)
+- [Architecture](#️-architecture)
+- [Quick Start](#-quick-start)
+- [API Endpoints](#-api-endpoints)
+- [Database Schema](#️-database-schema)
+- [Security Features](#-security-features)
+- [User Roles & Permissions](#-user-roles--permissions)
+- [Rate Limiting](#-rate-limiting)
+- [Email Notifications](#-email-notifications)
+- [TV Display Integration](#-tv-display-integration)
+- [Emergency Alerts](#-emergency-alerts)
+- [Development](#️-development)
+- [Deployment](#-deployment)
+- [Troubleshooting](#-troubleshooting)
+- [Database Schema Updates](#-database-schema-updates)
+- [Contributing](#-contributing)
+- [Support](#-support)
+- [License](#-license)
+
 ## 🎯 Overview
 
-The SST Announcement System is a full-stack Next.js application designed to manage and display college announcements. Built with Next.js 15 App Router, it features a modern React frontend with SCALER branding and a serverless API architecture using Next.js API routes.
+The SST Announcement System is a full-stack Next.js application designed to manage and display college announcements. Built with Next.js 16 App Router, it features a modern React frontend with SCALER branding and a serverless API architecture using Next.js API routes.
 
 ## ✨ Features
 
@@ -14,12 +36,13 @@ The SST Announcement System is a full-stack Next.js application designed to mana
 - **Category System** - Organize announcements by categories (College, Tech, Tech Events, Tech Workshops, Academic, Sports, Other)
 - **Scheduling** - Schedule announcements for future publication (Super Admin only)
 - **Expiry Management** - Set expiry dates with visual indicators for expired announcements
-- **Priority System** - Priority announcements with expiration windows
+- **Priority System** - Priority announcements with expiration windows (P0-P3 levels)
+- **Target Year Filtering** - Target announcements to specific student years
 - **Search & Filter** - Search announcements by title/description and filter by category
 - **TV Display Integration** - Send announcements to TV screens via `/api/tv` endpoint
 - **Email Notifications** - Send email alerts using Resend API
 - **Emergency Alerts** - Priority emergency announcements with immediate visibility
-- **Rate Limiting** - API rate limiting to prevent abuse
+- **Rate Limiting** - API rate limiting to prevent abuse with multiple tiers
 
 ### Admin Features
 - **Role-Based Access Control** - Four user roles: Student, Student Admin, Admin, Super Admin
@@ -41,12 +64,12 @@ The SST Announcement System is a full-stack Next.js application designed to mana
 ## 🏗️ Architecture
 
 ### Technology Stack
-- **Framework**: Next.js 15.0.3 (App Router)
+- **Framework**: Next.js 16.0.7 (App Router)
 - **Language**: TypeScript 5.6.3
-- **UI Library**: React 18.3.1
+- **UI Library**: React 19.2.1
 - **Styling**: Tailwind CSS 3.4.14
 - **Database**: PostgreSQL with Drizzle ORM 0.33.0
-- **Authentication**: Clerk (@clerk/nextjs 5.7.1, @clerk/backend 1.15.6)
+- **Authentication**: Clerk (@clerk/nextjs 6.35.6, @clerk/backend 2.25.0)
 - **Email Service**: Resend API 4.0.0
 - **Deployment**: Vercel (with cron jobs)
 - **UI Components**: Lucide React icons, Tailwind Merge, Class Variance Authority
@@ -104,7 +127,8 @@ sst_announcement/
 ├── lib/                          # Backend Library
 │   ├── config/                   # Configuration
 │   │   ├── config.ts
-│   │   └── db.ts                 # Database connection
+│   │   ├── db.ts                 # Database connection
+│   │   └── env.ts                # Environment validation
 │   ├── data/                     # Data access layer
 │   │   ├── announcements.ts      # Announcement data access
 │   │   └── users.ts              # User data access
@@ -114,9 +138,13 @@ sst_announcement/
 │   │   └── rateLimit.ts          # Rate limiting
 │   ├── schema.ts                 # Drizzle ORM schema
 │   ├── services/                 # External services
+│   │   ├── clerk.ts              # Clerk service
 │   │   └── email.ts              # Email service (Resend)
+│   ├── types/                    # TypeScript types
+│   │   └── index.ts              # Type definitions
 │   └── utils/                    # Utilities
 │       ├── errors.ts             # Error classes
+│       ├── roleUtils.ts          # Role utilities
 │       └── validation.ts         # Validation functions
 │
 ├── contexts/                     # React Context providers
@@ -134,15 +162,22 @@ sst_announcement/
 │
 ├── utils/                        # Frontend utilities
 │   ├── dateUtils.ts              # Date formatting
-│   └── announcementUtils.ts      # Announcement utilities
+│   ├── announcementUtils.ts      # Announcement utilities
+│   ├── linkParser.tsx            # Link parsing
+│   ├── priorityMapping.ts        # Priority mapping
+│   └── studentYear.ts            # Student year utilities
 │
 ├── constants/                    # Constants and configurations
 │   ├── categories.ts             # Category definitions
-│   └── categoryStyles.ts         # Category styling
+│   └── categoryStyles.tsx        # Category styling
+│
+├── config/                       # Configuration files
+│   └── config.ts                 # App configuration
 │
 ├── middleware.ts                 # Next.js middleware (CORS)
 ├── next.config.js                # Next.js configuration
-└── vercel.json                   # Vercel deployment config
+├── vercel.json                   # Vercel deployment config
+└── package.json                  # Dependencies and scripts
 ```
 
 ## 🚀 Quick Start
@@ -170,19 +205,21 @@ sst_announcement/
    
    Create a `.env.local` file in the root directory:
    ```env
-   # Database
+   # Database (Required)
    DATABASE_URL=postgresql://user:password@localhost:5432/database_name
    
-   # Clerk Authentication
+   # Clerk Authentication (Required)
    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
    CLERK_SECRET_KEY=sk_test_...
    
-   # Email (Resend)
+   # Session (Required)
+   SESSION_SECRET=your_session_secret
+   
+   # Email (Resend) - Optional
    RESEND_API_KEY=re_...
    RESEND_FROM_EMAIL=noreply@yourdomain.com
    
-   # Optional
-   SESSION_SECRET=your_session_secret
+   # Optional Configuration
    FRONTEND_URL=http://localhost:3000
    BACKEND_URL=http://localhost:3000
    DEPLOYMENT=local
@@ -194,7 +231,7 @@ sst_announcement/
    The database schema is defined in `lib/schema.ts` using Drizzle ORM. You'll need to:
    - Create the database tables manually based on the schema
    - Ensure all required tables exist: `users`, `announcements`, `announcement_engagements`
-   - Add any missing columns if you encounter schema errors (see Database Schema Updates section)
+   - Add any missing columns if you encounter schema errors (see [Database Schema Updates](#-database-schema-updates) section)
 
 5. **Start the development server**
    ```bash
@@ -215,7 +252,7 @@ sst_announcement/
 
 ### Authenticated Endpoints
 - `GET /api/profile` - Get current user profile
-- `POST /api/announcements` - Create announcement (Admin+)
+- `POST /api/announcements` - Create announcement (Student Admin+)
 - `PATCH /api/announcements/[id]` - Update announcement (Admin+)
 - `DELETE /api/announcements/[id]` - Delete announcement (Admin+)
 
@@ -265,12 +302,13 @@ sst_announcement/
 - `is_emergency` - Emergency flag (boolean, default: false, not null)
 - `emergency_expires_at` - Emergency expiration (with timezone)
 - `visible_after` - Visibility start time (with timezone)
+- `target_years` - Array of target student years (integer array, nullable)
 
 ### Announcement Engagements Table (`announcement_engagements`)
 - `id` - Primary key (serial)
 - `announcement_id` - Foreign key to announcements (integer, not null, references announcements.id, onDelete: cascade)
 - `user_id` - Foreign key to users (integer, references users.id, onDelete: set null)
-- `event_type` - Event type (text, not null): `view`, `click`, `dismiss`
+- `event_type` - Event type enum: `view`, `click`, `dismiss` (text, not null)
 - `created_at` - Event timestamp (with timezone, default now)
 
 ## 🔐 Security Features
@@ -278,11 +316,12 @@ sst_announcement/
 - **Clerk Authentication** - Secure JWT-based authentication
 - **Role-Based Access Control** - Four-tier permission system
 - **Domain Validation** - Restricts access to `@scaler.com` and `@sst.scaler.com` emails
-- **Rate Limiting** - Prevents API abuse with configurable limits (general and admin-specific)
+- **Rate Limiting** - Prevents API abuse with configurable limits (see [Rate Limiting](#-rate-limiting) section)
 - **CORS Protection** - Centralized CORS handling via Next.js middleware (`middleware.ts`)
 - **SQL Injection Prevention** - Parameterized queries with Drizzle ORM
-- **Environment Variable Protection** - Sensitive data in `.env.local`
+- **Environment Variable Protection** - Sensitive data in `.env.local` with validation
 - **Request Validation** - Input validation for all API endpoints
+- **IP-based Rate Limiting** - Tracks requests by client IP address
 
 ## 🎨 User Roles & Permissions
 
@@ -312,6 +351,51 @@ sst_announcement/
 - Full system access
 - Access to all admin endpoints
 
+## ⚡ Rate Limiting
+
+The system implements multiple rate limiting tiers to protect against API abuse. Rate limits are configured in `lib/middleware/rateLimit.ts` and use an in-memory store (Map-based) that tracks requests by IP address.
+
+### Rate Limit Tiers
+
+1. **General Limiter** (`generalLimiterOptions`)
+   - Window: 15 minutes
+   - Max Requests: 100 per IP
+   - Used for: General API endpoints
+
+2. **Auth Limiter** (`authLimiterOptions`)
+   - Window: 15 minutes
+   - Max Requests: 25 per IP
+   - Used for: Authentication-related endpoints
+
+3. **Admin Limiter** (`adminLimiterOptions`)
+   - Window: 15 minutes
+   - Max Requests: 200 per IP
+   - Used for: Admin endpoints
+
+4. **Strict Limiter** (`strictLimiterOptions`)
+   - Window: 1 hour
+   - Max Requests: 3 per IP
+   - Used for: Sensitive operations (e.g., email sending)
+
+### How It Works
+
+- Rate limits are tracked per IP address using the `x-forwarded-for` or `x-real-ip` headers
+- Each rate limit window resets after the specified time period
+- When a limit is exceeded, a `ForbiddenError` is thrown with the message: "Too many requests, please try again later."
+- The rate limiter uses an in-memory Map store (resets on server restart)
+
+### Customization
+
+To adjust rate limits, modify the options in `lib/middleware/rateLimit.ts`:
+
+```typescript
+export const generalLimiterOptions: RateLimitOptions = {
+  windowMs: 15 * 60 * 1000,  // 15 minutes in milliseconds
+  max: 100,                   // Maximum requests per window
+  keyPrefix: 'general',       // Prefix for storage key
+};
+```
+
 ## 📧 Email Notifications
 
 The system uses Resend API for email notifications:
@@ -320,6 +404,8 @@ The system uses Resend API for email notifications:
 - Tracks email delivery status (`email_sent` field)
 - Currently hardcoded to send to: `mohammed.24bcs10278@sst.scaler.com`
 - Email sending is optional per announcement (`send_email` flag)
+- Test email functionality available via `/api/test-email` endpoint
+- Debug email configuration available via `/api/debug-email` endpoint
 
 ## 📺 TV Display Integration
 
@@ -329,6 +415,7 @@ The system uses Resend API for email notifications:
 - Ordered by creation date (newest first)
 - Designed for digital signage integration
 - Includes rate limiting for API protection
+- Public endpoint (no authentication required)
 
 ## 🚨 Emergency Alerts
 
@@ -339,6 +426,7 @@ The system uses Resend API for email notifications:
 - **Expiration** - Configurable emergency duration (1-168 hours)
 - **Visual Indicators** - Emergency announcements are visually distinct
 - **Immediate Visibility** - Emergency announcements bypass normal visibility rules
+- **Priority Levels** - Supports P0 (Highest) through P3 (Normal) priority levels
 
 ## 🛠️ Development
 
@@ -352,7 +440,7 @@ npm run type-check # TypeScript type checking
 ```
 
 ### Key Technologies
-- **Next.js 15** - React framework with App Router
+- **Next.js 16** - React framework with App Router
 - **Drizzle ORM** - Type-safe database queries
 - **Clerk** - Authentication and user management
 - **Resend** - Email delivery service
@@ -379,8 +467,9 @@ npm run type-check # TypeScript type checking
 - `DATABASE_URL` - Production PostgreSQL connection string
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` - Clerk publishable key
 - `CLERK_SECRET_KEY` - Clerk secret key
-- `RESEND_API_KEY` - Resend API key
-- `RESEND_FROM_EMAIL` - Verified sender email
+- `SESSION_SECRET` - Session secret for secure sessions
+- `RESEND_API_KEY` - Resend API key (optional)
+- `RESEND_FROM_EMAIL` - Verified sender email (optional)
 - `DEPLOYMENT=production` - Set deployment mode
 - `CRON_SECRET` - Secret for cron job authentication
 
@@ -442,17 +531,23 @@ CORS is handled in two places:
 7. **Rate Limiting Issues**
    - Rate limits are configured in `lib/middleware/rateLimit.ts`
    - Adjust limits if needed for your use case
-   - Check rate limit headers in API responses
+   - Rate limits reset on server restart (in-memory store)
+   - Check IP detection if rate limits aren't working correctly
 
 8. **TypeScript Errors**
    - Run `npm run type-check` to see all errors
    - Ensure all types are properly imported
    - Check for missing type definitions
 
+9. **Environment Variable Validation Errors**
+   - Ensure all required environment variables are set (see `lib/config/env.ts`)
+   - Required variables: `DATABASE_URL`, `SESSION_SECRET`, `CLERK_SECRET_KEY`
+   - Check `.env.local` file is in the root directory
+
 ## 📝 Database Schema Updates
 
 ### Adding Missing Columns
-If you encounter errors about missing columns (e.g., `send_tv`), you can add them manually using SQL:
+If you encounter errors about missing columns, you can add them manually using SQL:
 
 **Add `send_tv` column:**
 ```sql
@@ -464,6 +559,18 @@ ADD COLUMN IF NOT EXISTS send_tv BOOLEAN DEFAULT false NOT NULL;
 ```sql
 ALTER TABLE announcements 
 ADD COLUMN IF NOT EXISTS priority_until TIMESTAMPTZ;
+```
+
+**Add `target_years` column (if needed):**
+```sql
+ALTER TABLE announcements 
+ADD COLUMN IF NOT EXISTS target_years INTEGER[];
+```
+
+**Add `visible_after` column (if needed):**
+```sql
+ALTER TABLE announcements 
+ADD COLUMN IF NOT EXISTS visible_after TIMESTAMPTZ;
 ```
 
 ### Removing Unused Tables
@@ -496,7 +603,7 @@ For issues and questions:
 - Create an issue in the repository
 - Check existing documentation files
 - Review API route implementations in `app/api/`
-- Check TypeScript types in `types/index.ts`
+- Check TypeScript types in `types/index.ts` and `lib/types/index.ts`
 
 ## 🙏 Acknowledgments
 
