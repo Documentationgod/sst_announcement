@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server';
 import { applyRateLimit, adminLimiterOptions, generalLimiterOptions, type RateLimitOptions } from './rateLimit';
-import { requireAuth, requireAdmin, requireSuperAdmin, type AuthenticatedUser } from './auth';
+import { requireAuth, requireAdmin, requireSuperAdmin } from './auth';
 import { requireAllowedDomain } from './domain';
+import type { AuthenticatedUser } from '../types/index';
 
 interface AuthOptions {
   rateLimitOptions?: RateLimitOptions;
@@ -15,7 +16,7 @@ export async function authenticateRequest(
 ): Promise<AuthenticatedUser> {
   const {
     rateLimitOptions = adminLimiterOptions,
-    requireSuperAdmin = false,
+    requireSuperAdmin: needsSuperAdmin = false,
     enforceDomain = true,
   } = options;
 
@@ -27,7 +28,7 @@ export async function authenticateRequest(
     requireAllowedDomain(user);
   }
 
-  if (requireSuperAdmin) {
+  if (needsSuperAdmin) {
     requireSuperAdmin(user);
   } else {
     requireAdmin(user);
