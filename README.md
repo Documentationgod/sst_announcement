@@ -49,7 +49,7 @@ The SST Announcement System is a full-stack Next.js application designed to mana
 ### Admin Features
 - **Role-Based Access Control** - Four user roles: Student, Student Admin, Admin, Super Admin
 - **User Management** - Manage users, roles, and admin privileges (Super Admin only)
-- **Announcement Moderation** - Review, approve, or reject announcements
+- **Shared Authentication Middleware** - Reusable `authenticateRequest` helper for consistent auth across routes
 
 ### UI/UX Features
 - **SCALER Branding** - Professional design with SCALER School of Technology branding
@@ -134,7 +134,8 @@ sst_announcement/
 │   ├── middleware/               # Middleware functions
 │   │   ├── auth.ts               # Authentication middleware
 │   │   ├── domain.ts             # Domain validation
-│   │   └── rateLimit.ts          # Rate limiting
+│   │   ├── rateLimit.ts          # Rate limiting
+│   │   └── withAuth.ts           # Shared authentication helper
 │   ├── schema.ts                 # Drizzle ORM schema
 │   ├── services/                 # External services
 │   │   ├── clerk.ts              # Clerk service
@@ -289,7 +290,7 @@ sst_announcement/
 - `scheduled_at` - When to publish (with timezone, Super Admin only)
 - `reminder_time` - Reminder notification time (with timezone)
 - `is_active` - Active status (boolean, default: true)
-- `status` - Enum: `scheduled`, `active`, `urgent`, `expired` (default: `active`)
+- `status` - Enum: `scheduled`, `active`, `urgent`, `expired` (default: `active`, not null)
 - `views_count` - View count (integer, default: 0)
 - `clicks_count` - Click count (integer, default: 0)
 - `send_email` - Whether to send email notification (boolean, default: false, not null)
@@ -320,6 +321,8 @@ sst_announcement/
 - **Environment Variable Protection** - Sensitive data in `.env.local` with validation
 - **Request Validation** - Input validation for all API endpoints
 - **IP-based Rate Limiting** - Tracks requests by client IP address
+- **Shared Authentication Middleware** - Centralized authentication helper (`authenticateRequest`) ensures 
+consistent security across all admin routes
 
 ## 🎨 User Roles & Permissions
 
@@ -380,9 +383,18 @@ The system implements multiple rate limiting tiers to protect against API abuse.
 ### How It Works
 
 - Rate limits are tracked per IP address using the `x-forwarded-for` or `x-real-ip` headers
+- IP detection prioritizes `x-forwarded-for` (first IP in comma-separated list), then `x-real-ip`, then falls back to request IP
 - Each rate limit window resets after the specified time period
 - When a limit is exceeded, a `ForbiddenError` is thrown with the message: "Too many requests, please try again later."
 - The rate limiter uses an in-memory Map store (resets on server restart)
+
+### Using Authentication Middleware
+
+The system includes a shared `authenticateRequest` helper in `lib/middleware/withAuth.ts` that combines:
+- Rate limiting
+- User authentication
+- Domain validation
+- Role-based authorization
 
 ### Customization
 
