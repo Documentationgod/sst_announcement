@@ -5,7 +5,6 @@ export async function GET(request: NextRequest) {
   try {
     const env = getEnvConfig();
     
-    // Check email configuration without exposing sensitive data
     const emailConfig = {
       hasResendApiKey: !!env.RESEND_API_KEY,
       resendApiKeyLength: env.RESEND_API_KEY ? env.RESEND_API_KEY.length : 0,
@@ -40,7 +39,6 @@ export async function POST(request: NextRequest) {
   try {
     const { sendAnnouncementEmail } = await import('@/lib/services/email');
     
-    // Test sending email with hardcoded recipient
     const result = await sendAnnouncementEmail({
       title: 'Debug Test Email',
       description: 'This is a debug test email to verify email functionality is working with the hardcoded recipient.',

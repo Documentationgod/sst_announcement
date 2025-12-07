@@ -56,12 +56,11 @@ export async function requireAuth(request: NextRequest, options?: { enforceDomai
 export function requireRole(user: AuthenticatedUser, role: UserRole): void {
   const hierarchy: Record<UserRole, number> = {
     student: 1,
-    student_admin: 2,  // Same access level as admin
-    admin: 2,          // Same access level as student_admin
+    student_admin: 2,  
+    admin: 2,          
     super_admin: 3,
   };
 
-  // Normalize the user's role to handle old formats
   const normalizedUserRole = normalizeUserRole(user.role, (user as any).is_admin);
   const userRoleLevel = hierarchy[normalizedUserRole] ?? 1;
   if (userRoleLevel < hierarchy[role]) {
@@ -69,22 +68,16 @@ export function requireRole(user: AuthenticatedUser, role: UserRole): void {
   }
 }
 
-/**
- * Check if user has admin-level access (student_admin, admin, or super_admin)
- */
 export function hasAdminAccess(user: AuthenticatedUser): boolean {
   const normalizedRole = normalizeUserRole(user.role, (user as any).is_admin);
   return ['student_admin', 'admin', 'super_admin'].includes(normalizedRole);
 }
 
-/**
- * Check if user has announcement priority over another role
- */
 export function hasAnnouncementPriority(user: AuthenticatedUser, targetRole: UserRole): boolean {
   const announcementPriority: Record<UserRole, number> = {
     student: 1,
     student_admin: 2,
-    admin: 3,          // Higher priority than student_admin
+    admin: 3,          
     super_admin: 4,
   };
   
@@ -100,9 +93,6 @@ export function requireAdmin(user: AuthenticatedUser): void {
   }
 }
 
-/**
- * Require student admin level or higher (student_admin, admin, super_admin)
- */
 export function requireStudentAdmin(user: AuthenticatedUser): void {
   requireRole(user, 'student_admin');
 }

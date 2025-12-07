@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { ForbiddenError } from '../utils/errors';
 
-interface RateLimitOptions {
+export interface RateLimitOptions {
   windowMs: number;
   max: number;
   keyPrefix: string;
@@ -15,7 +15,6 @@ interface RateLimitState {
 const limiterStore = new Map<string, RateLimitState>();
 
 function getClientIp(request: NextRequest): string {
-  // Try to get IP from various headers
   const forwarded = request.headers.get('x-forwarded-for');
   if (forwarded) {
     return forwarded.split(',')[0]?.trim() || 'unknown';
@@ -26,7 +25,6 @@ function getClientIp(request: NextRequest): string {
     return realIp;
   }
   
-  // Fallback to request IP (available in Edge Runtime)
   return (request as any).ip || 'unknown';
 }
 

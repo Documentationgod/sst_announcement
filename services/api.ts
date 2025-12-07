@@ -50,14 +50,13 @@ class ApiService {
 
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
         headers,
-        credentials: 'include', // Include cookies for CORS with credentials
+        credentials: 'include', 
         ...options, 
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        // Handle backend error responses
         const errorMessage = data.message || data.error || `HTTP error! status: ${response.status}`
         return {
           success: false,
@@ -65,17 +64,11 @@ class ApiService {
         }
       }
 
-      // Handle different response formats from backend
-      // Some endpoints return { data: ... }, others return { success: true, data: ... }
-      // or just the data directly
       if (data.success !== undefined) {
-        // Response has success field
         return { success: data.success, data: data.data, error: data.error }
       } else if (data.data !== undefined) {
-        // Response has data field
         return { success: true, data: data.data }
       } else {
-        // Response is the data itself
         return { success: true, data: data }
       }
     } catch (error) {
@@ -175,14 +168,6 @@ class ApiService {
   // User profile
   async getUserProfile(): Promise<ApiResponse<User>> {
     return this.request<User>('/api/profile')
-  }
-
-  // Review announcements
-  async reviewAnnouncement(id: number, action: 'accept' | 'reject' | 'send_back', scheduled_at?: string): Promise<ApiResponse<Announcement>> {
-    return this.request<Announcement>(`/api/announcements/${id}/review`, {
-      method: 'POST',
-      body: JSON.stringify({ action, scheduled_at }),
-    })
   }
 
   // Debug (for development)

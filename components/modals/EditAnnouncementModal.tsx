@@ -33,7 +33,7 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
     scheduled_at: '',
     reminder_time: '',
     is_active: true,
-    status: isSuperAdmin ? 'active' : 'under_review',
+    status: 'active',
     target_years: null,
   });
   const [deadlines, setDeadlines] = useState<Deadline[]>([]);
@@ -49,7 +49,7 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
         scheduled_at: formatDateForInput(announcement.scheduled_at),
         reminder_time: formatDateForInput(announcement.reminder_time),
         is_active: announcement.is_active ?? true,
-        status: isSuperAdmin ? (announcement.status || 'active') : 'under_review',
+        status: announcement.status || 'active',
         target_years: announcement.target_years ?? null,
       });
       setDeadlines(announcement.deadlines || []);
@@ -87,7 +87,6 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
       deadlines: validDeadlines.length > 0 ? validDeadlines : null,
     };
     if (!isSuperAdmin) {
-      submissionData.status = 'under_review';
       delete submissionData.scheduled_at;
     }
     await onSubmit(announcement.id!, submissionData);

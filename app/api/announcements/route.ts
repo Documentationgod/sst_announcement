@@ -14,7 +14,6 @@ import { getAnnouncementPriority } from '@/utils/announcementUtils';
 import type { UserRole } from '@/utils/announcementUtils';
 import { getYearMetadataFromEmail, extractIntakeCodeFromEmail } from '@/utils/studentYear';
 
-// Schema helper flags removed; assume schema is ready. Stub state for fallback logic.
 let priorityColumnState: 'supported' | 'unsupported' = 'unsupported';
 
 export async function GET(request: NextRequest) {
@@ -47,7 +46,7 @@ export async function GET(request: NextRequest) {
           if (!userIntakeCode) {
             return false;
           }
-          return targets.includes(userIntakeCode); // Match by intake code (23, 24, 25, etc.)
+          return targets.includes(userIntakeCode); 
         });
 
     return NextResponse.json({ success: true, data: filteredData });
@@ -81,7 +80,7 @@ export async function POST(request: NextRequest) {
       scheduled_at,
       reminder_time,
       priority_until,
-      priority_level = 3, // Default to P3
+      priority_level = 3, 
       is_active = true,
       status = 'active',
       send_email = false,
@@ -92,7 +91,6 @@ export async function POST(request: NextRequest) {
     } = body;
 
     const db = getDb();
-    // Assume schema is already up to date in production
     const prioritySupported = true;
     const targetYearsSupported = true;
     const now = new Date();
@@ -102,11 +100,9 @@ export async function POST(request: NextRequest) {
     let priorityUntilDate = priorityUntilRaw && !isNaN(priorityUntilRaw.getTime()) ? priorityUntilRaw : null;
     const hasPriorityWindow = priorityUntilDate ? priorityUntilDate > now : false;
     
-    // Validate priority_level (0-3, where 0=P0, 1=P1, 2=P2, 3=P3)
     const validPriorityLevel = Math.max(0, Math.min(3, priority_level ?? 3));
     const userRole = normalizeUserRole(user.role, user.is_admin);
     
-    // Check if this is an emergency announcement
     const isEmergencyAnnouncement = is_emergency || false;
 
     let resolvedScheduledDate = scheduledDate;
@@ -132,7 +128,6 @@ export async function POST(request: NextRequest) {
 
     const normalizedTargetYears = normalizeTargetYears(target_years);
 
-    // Normalize deadlines - validate and format
     let normalizedDeadlines: any = null;
     if (deadlines && Array.isArray(deadlines) && deadlines.length > 0) {
       normalizedDeadlines = deadlines
@@ -172,15 +167,13 @@ export async function POST(request: NextRequest) {
     if (isEmergencyAnnouncement) {
       finalStatus = 'active';
       finalIsActive = true;
-      finalScheduledAt = null; // Emergency announcements are immediate
-      finalPriorityLevel = 0; // P0 - highest priority
+      finalScheduledAt = null; 
+      finalPriorityLevel = 0; 
       finalExpiryDate = emergencyExpiresAtDate || (expiry_date ? new Date(expiry_date) : null);
-      // Keep emergency "on top" for the emergency window; if a window is provided, reuse it as priority window
       if (!priorityUntilDate && emergencyExpiresAtDate) {
         priorityUntilDate = emergencyExpiresAtDate;
       }
     } else {
-      // Regular announcements follow normal logic
       const isScheduled = resolvedScheduledDate ? resolvedScheduledDate > now : false;
       finalStatus = hasPriorityWindow ? 'urgent' : isScheduled ? 'scheduled' : status;
       finalIsActive = isScheduled ? false : hasPriorityWindow ? true : is_active;
@@ -213,7 +206,6 @@ export async function POST(request: NextRequest) {
       announcementValues.targetYears = normalizedTargetYears;
     }
     
-    // Add deadlines (store as JSON string for database)
     if (normalizedDeadlines) {
       announcementValues.deadlines = JSON.stringify(normalizedDeadlines);
     } else {
@@ -232,8 +224,6 @@ export async function POST(request: NextRequest) {
     let emailSent = false;
     let emailMessage: string | null = null;
 
-    // Emergency announcements can always send emails immediately (they're never scheduled)
-    // Regular announcements can send if not scheduled
     const canSendEmail = isEmergencyAnnouncement ? true : !(finalScheduledAt && finalScheduledAt > now);
 
     if (send_email && canSendEmail) {
@@ -305,7 +295,7 @@ function normalizeTargetYears(value: unknown): number[] | null {
           return typeof entry === 'number' ? entry : null;
         })
         .filter((entry): entry is number => entry !== null)
-        .filter((year) => Number.isInteger(year) && year >= 1 && year <= 99) // Intake year codes (23, 24, 25, etc.)
+        .filter((year) => Number.isInteger(year) && year >= 1 && year <= 99) 
     )
   ).sort((a, b) => a - b);
 
@@ -335,7 +325,7 @@ type DetailedConflictRecord = {
 async function findNextAvailableScheduleSlot(
   desiredDate: Date
 ): Promise<ScheduleResolutionResult> {
-  const maxIterations = 180; // Search up to 3 hours ahead (minute granularity)
+  const maxIterations = 180; 
   const normalizedDesired = new Date(desiredDate);
   normalizedDesired.setSeconds(0, 0);
   let candidate = new Date(normalizedDesired);
@@ -446,7 +436,7 @@ async function fetchConflictsForRange(start: Date, end: Date): Promise<DetailedC
       WHERE a.scheduled_at IS NOT NULL
         AND a.scheduled_at >= $1
         AND a.scheduled_at < $2
-        AND a.status IN ('scheduled', 'under_review', 'active')
+        AND a.status IN ('scheduled', 'active')
     `,
     values: [start.toISOString(), end.toISOString()],
   });
@@ -482,12 +472,9 @@ async function insertAnnouncementWithFallback(
       const [record] = await db.insert(announcements).values(values).returning();
       return record;
     } catch (error) {
-      // If insert fails with priority column, retry without it
       if (isMissingPriorityColumnError(error)) {
         priorityColumnState = 'unsupported';
-        // Fall through to manual insert below
       } else if (isInvalidEnumError(error) && values.status === 'urgent') {
-        // If 'urgent' status is not supported by enum, fallback to 'active'
         console.warn('Urgent status not supported, using active instead');
         const fallbackValues = { ...values, status: 'active' as const };
         const [record] = await db.insert(announcements).values(fallbackValues).returning();
@@ -498,14 +485,12 @@ async function insertAnnouncementWithFallback(
     }
   }
 
-  // Priority column not available - use manual insert without that column
   const pool = getPool();
   const targetYearsValue =
     targetYearsSupported && Array.isArray(values.targetYears) && values.targetYears.length > 0
       ? values.targetYears
       : null;
 
-  // Use 'active' instead of 'urgent' if enum doesn't support it
   const insertStatus = values.status === 'urgent' ? 'active' : (values.status ?? 'active');
   const priorityLevel = values.priorityLevel ?? 3;
   
@@ -659,7 +644,6 @@ function mapRowToAnnouncement(row: any): typeof announcements.$inferSelect {
   const targetYears =
     Array.isArray(row.target_years) && row.target_years.length > 0 ? row.target_years : null;
   
-  // Parse deadlines from JSON
   let deadlines: any = null;
   if (row.deadlines) {
     try {

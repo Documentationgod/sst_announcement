@@ -228,10 +228,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
   const handleUpdateAnnouncement = async (id: number, data: UpdateAnnouncementData) => {
     setEditLoading(true);
     try {
-      // Find the announcement being edited to check its status
-      const announcementBeingEdited = announcements.find(a => a.id === id);
-      const wasUnderReviewOrRejected = announcementBeingEdited?.status === 'under_review' || announcementBeingEdited?.status === 'rejected';
-      
       const response = await apiService.updateAnnouncement(id, data);
       if (response.success) {
         const announcementsResponse = await apiService.getAnnouncements();
@@ -240,13 +236,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
         }
         setShowEditForm(false);
         setEditingAnnouncement(null);
-        
-        // Show appropriate success message based on announcement status
-        if (wasUnderReviewOrRejected) {
-          showToast('Announcement updated successfully! Resubmitted for superadmin review.', 'success');
-        } else {
-          showToast('Announcement updated successfully!', 'success');
-        }
+        showToast('Announcement updated successfully!', 'success');
       } else {
         showToast(response.error || 'Failed to update announcement', 'error');
       }

@@ -1,33 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { applyRateLimit, adminLimiterOptions } from '@/lib/middleware/rateLimit';
-import { requireAuth, requireAdmin } from '@/lib/middleware/auth';
-import { requireAllowedDomain } from '@/lib/middleware/domain';
+import { authenticateRequest } from '@/lib/middleware/withAuth';
+import { adminLimiterOptions } from '@/lib/middleware/rateLimit';
 import { getUserById } from '@/lib/data/users';
-import { BadRequestError, NotFoundError } from '@/lib/utils/errors';
-
-function parseId(id: string): number {
-  if (!id) {
-    throw new BadRequestError('User ID is required');
-  }
-  const parsed = Number(id);
-  if (Number.isNaN(parsed)) {
-    throw new BadRequestError('User ID must be a valid number');
-  }
-  return parsed;
-}
+import { NotFoundError } from '@/lib/utils/errors';
+import { parseId } from '@/lib/utils/validation';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await applyRateLimit(request, adminLimiterOptions);
-    const user = await requireAuth(request, { enforceDomain: true });
-    requireAllowedDomain(user);
-    requireAdmin(user);
+    const user = await authenticateRequest(request, {
+      rateLimitOptions: adminLimiterOptions,
+      enforceDomain: true,
+    });
 
     const { id: idParam } = await params;
-    const id = parseId(idParam);
+    const id = parseId(idParam, 'User ID');
     const targetUser = await getUserById(id);
     if (!targetUser) {
       throw new NotFoundError('User', id);

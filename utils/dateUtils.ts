@@ -20,9 +20,6 @@ export const isAnnouncementExpired = (announcement: { expiry_date?: string | nul
   return expiryDate < now
 }
 
-/**
- * Format a date string for HTML datetime-local input
- */
 export const formatDateForInput = (dateString?: string | null): string => {
   if (!dateString) return ''
   
@@ -30,7 +27,6 @@ export const formatDateForInput = (dateString?: string | null): string => {
     const date = new Date(dateString)
     if (isNaN(date.getTime())) return ''
     
-    // Format as YYYY-MM-DDTHH:MM for datetime-local input
     const year = date.getFullYear()
     const month = String(date.getMonth() + 1).padStart(2, '0')
     const day = String(date.getDate()).padStart(2, '0')

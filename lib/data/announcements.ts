@@ -8,7 +8,6 @@ export function mapAnnouncement(record: AnnouncementRecord) {
   const targetYears =
     Array.isArray(record.targetYears) && record.targetYears.length > 0 ? record.targetYears : null;
   
-  // Parse deadlines if it's a JSON string or already parsed
   let deadlines = null;
   if (record.deadlines) {
     try {
@@ -82,7 +81,7 @@ export async function getTvData() {
     .from(announcements)
     .where(eq(announcements.sendTV, true))
     .orderBy(desc(announcements.createdAt))
-    .limit(5);
+    .limit(10);
 
   return rows.map(mapAnnouncement);
 }

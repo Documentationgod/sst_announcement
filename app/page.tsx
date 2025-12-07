@@ -11,7 +11,6 @@ function AppContent() {
   const { user, isLoading, error } = useAppUser()
   const [currentPage, setCurrentPage] = useState<'dashboard' | 'all-announcements'>('dashboard')
 
-  // Check URL path for routing
   useEffect(() => {
     const path = window.location.pathname
     if (path === '/all-announcements') {
@@ -21,7 +20,6 @@ function AppContent() {
     }
   }, [])
 
-  // Handle browser back/forward
   useEffect(() => {
     const handlePopState = () => {
       const path = window.location.pathname

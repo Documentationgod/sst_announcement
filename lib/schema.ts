@@ -32,7 +32,7 @@ export const announcements = pgTable('announcements', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }),
   expiryDate: timestamp('expiry_date', { withTimezone: true }),
-  deadlines: jsonb('deadlines').default([]), // Array of {label: string, date: string}
+  deadlines: jsonb('deadlines').default([]), 
   scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
   reminderTime: timestamp('reminder_time', { withTimezone: true }),
   isActive: boolean('is_active').default(true),
@@ -46,7 +46,7 @@ export const announcements = pgTable('announcements', {
   isEmergency: boolean('is_emergency').default(false).notNull(),
   emergencyExpiresAt: timestamp('emergency_expires_at', { withTimezone: true }),
   visibleAfter: timestamp('visible_after', { withTimezone: true }),
-  priorityLevel: integer('priority_level').default(3).notNull(), // P0=0, P1=1, P2=2, P3=3
+  priorityLevel: integer('priority_level').default(3).notNull(), 
   targetYears: integer('target_years').array(),
 });
 
@@ -58,7 +58,6 @@ export const announcementEngagements = pgTable('announcement_engagements', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
-// Relations (optional, for easier joins)
 export const usersRelations = relations(users, ({ many }) => ({
   announcements: many(announcements),
   engagements: many(announcementEngagements),
@@ -83,7 +82,6 @@ export const announcementEngagementsRelations = relations(announcementEngagement
   }),
 }));
 
-// Type exports for TypeScript
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Announcement = typeof announcements.$inferSelect;

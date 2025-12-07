@@ -1,6 +1,6 @@
 import React from 'react';
 
-const URL_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+|[a-zA-Z0-9-]+\.[a-zA-Z]{2,}[^\s]*)/gi; // Regex to match URLs
+const URL_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+|[a-zA-Z0-9-]+\.[a-zA-Z]{2,}[^\s]*)/gi; 
 
 
 export function parseLinks(text: string): React.ReactNode[] {

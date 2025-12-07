@@ -1,3 +1,5 @@
+import { BadRequestError } from './errors';
+
 export interface ValidationErrorItem {
   field: string;
   message: string;
@@ -111,4 +113,15 @@ function isValidDate(dateString: string): boolean {
 
 export function validateUserId(id: unknown): id is number {
   return typeof id === 'number' && Number.isInteger(id) && id > 0;
+}
+
+export function parseId(id: string, resourceName: string = 'ID'): number {
+  if (!id) {
+    throw new BadRequestError(`${resourceName} is required`);
+  }
+  const parsed = Number(id);
+  if (Number.isNaN(parsed)) {
+    throw new BadRequestError(`${resourceName} must be a valid number`);
+  }
+  return parsed;
 }

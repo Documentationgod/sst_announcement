@@ -76,18 +76,14 @@ export const isVisibleToUser = (
   const now = new Date()
   const isEmergency = announcement.is_emergency || false
   
-  // Emergency announcements have special visibility rules
   if (isEmergency) {
-    // Check if emergency has expired
     if (announcement.emergency_expires_at) {
       const emergencyExpiry = new Date(announcement.emergency_expires_at)
       if (!isNaN(emergencyExpiry.getTime()) && emergencyExpiry < now) {
-        return false // Emergency has expired
+        return false 
       }
     }
     
-    // Emergency announcements bypass scheduled_at and expiry_date checks
-    // But still respect target_years if set
     if (!hasAdminLevel && !isSuperAdmin) {
       const targetYears = Array.isArray(announcement.target_years) ? announcement.target_years : null
       if (targetYears && targetYears.length > 0) {
@@ -97,18 +93,13 @@ export const isVisibleToUser = (
       }
     }
     
-    return true // Emergency announcements are visible until emergency_expires_at
+          return true 
   }
   
-  // Regular announcements follow normal visibility rules
   if (!hasAdminLevel && !isSuperAdmin) {
-    // Allow scheduled announcements to be visible (like policies/upcoming events)
-    // Only hide if scheduled for future (not yet time to show)
     if (announcement.scheduled_at) {
       const scheduledDate = new Date(announcement.scheduled_at)
       if (!isNaN(scheduledDate.getTime())) {
-        // Hide if scheduled for future (not yet time to show)
-        // Once scheduled time has passed, announcement is live and should be visible
         if (scheduledDate > now) {
           return false
         }
@@ -140,15 +131,13 @@ export const searchAnnouncements = (announcements: Announcement[], query: string
   )
 }
 
-// Helper function to get the nearest upcoming deadline or expiry date
 function getNearestApproachingDate(announcement: Announcement, now: Date): { date: Date | null; type: 'expiry' | 'deadline' | null } {
-  const WARNING_DAYS = 7; // Show warnings for dates within 7 days
+  const WARNING_DAYS = 7; 
   const warningThreshold = new Date(now.getTime() + WARNING_DAYS * 24 * 60 * 60 * 1000);
   
   let nearestDate: Date | null = null;
   let nearestType: 'expiry' | 'deadline' | null = null;
   
-  // Check expiry date
   if (announcement.expiry_date) {
     const expiryDate = new Date(announcement.expiry_date);
     if (!isNaN(expiryDate.getTime()) && expiryDate > now && expiryDate <= warningThreshold) {
@@ -157,7 +146,6 @@ function getNearestApproachingDate(announcement: Announcement, now: Date): { dat
     }
   }
   
-  // Check deadlines
   if (announcement.deadlines && Array.isArray(announcement.deadlines) && announcement.deadlines.length > 0) {
     for (const deadline of announcement.deadlines) {
       if (deadline.date) {
@@ -182,11 +170,9 @@ export const sortAnnouncementsByPriority = (announcements: Announcement[], userR
     const aIsEmergency = a.is_emergency || false
     const bIsEmergency = b.is_emergency || false
     
-    // Emergency announcements always come first
     if (aIsEmergency && !bIsEmergency) return -1
     if (!aIsEmergency && bIsEmergency) return 1
     
-    // If both are emergency, sort by emergency_expires_at (active ones first, then by expiry time)
     if (aIsEmergency && bIsEmergency) {
       const aEmergencyExpiry = a.emergency_expires_at ? new Date(a.emergency_expires_at) : null
       const bEmergencyExpiry = b.emergency_expires_at ? new Date(b.emergency_expires_at) : null
@@ -194,11 +180,9 @@ export const sortAnnouncementsByPriority = (announcements: Announcement[], userR
       const aIsActive = !aEmergencyExpiry || aEmergencyExpiry > now
       const bIsActive = !bEmergencyExpiry || bEmergencyExpiry > now
       
-      // Active emergencies come before expired ones
       if (aIsActive && !bIsActive) return -1
       if (!aIsActive && bIsActive) return 1
       
-      // Both active or both expired - sort by expiry time (sooner expiry first for active, later expiry first for expired)
       if (aIsActive && bIsActive) {
         if (aEmergencyExpiry && bEmergencyExpiry) {
           return aEmergencyExpiry.getTime() - bEmergencyExpiry.getTime()
@@ -207,28 +191,23 @@ export const sortAnnouncementsByPriority = (announcements: Announcement[], userR
         if (bEmergencyExpiry) return 1
       }
       
-      // Fallback to creation date for emergencies
       const aDate = new Date(a.created_at || 0)
       const bDate = new Date(b.created_at || 0)
       return bDate.getTime() - aDate.getTime()
     }
-    
-    // Prioritize announcements with approaching expiry dates or deadlines (ONLY for students)
-    // Admins, student admins, and super admins see normal priority sorting
+
     if (userRole === 'student') {
       const aApproaching = getNearestApproachingDate(a, now);
       const bApproaching = getNearestApproachingDate(b, now);
       
-      if (aApproaching.date && !bApproaching.date) return -1; // a has approaching date, b doesn't
-      if (!aApproaching.date && bApproaching.date) return 1;  // b has approaching date, a doesn't
+      if (aApproaching.date && !bApproaching.date) return -1; 
+      if (!aApproaching.date && bApproaching.date) return 1; 
       
-      // Both have approaching dates - sort by which is sooner
       if (aApproaching.date && bApproaching.date) {
         return aApproaching.date.getTime() - bApproaching.date.getTime();
       }
     }
     
-    // Regular announcements follow normal priority sorting
     const aPriorityNum = a.priority_level ?? 3
     const bPriorityNum = b.priority_level ?? 3
     
@@ -273,11 +252,9 @@ export const filterAnnouncementsByRole = (announcements: Announcement[], userRol
       return true
     }
     
-    // For students: show active announcements OR announcements with deadlines
     const hasDeadlines = announcement.deadlines && Array.isArray(announcement.deadlines) && announcement.deadlines.length > 0;
     const isActive = announcement.status === 'active' && announcement.is_active !== false;
     
-    // Show if active OR has deadlines (so students can see deadline announcements)
     return isActive || hasDeadlines;
   })
 }

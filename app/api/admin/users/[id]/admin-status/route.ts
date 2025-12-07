@@ -1,33 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { applyRateLimit, adminLimiterOptions } from '@/lib/middleware/rateLimit';
-import { requireAuth, requireSuperAdmin } from '@/lib/middleware/auth';
-import { requireAllowedDomain } from '@/lib/middleware/domain';
+import { authenticateRequest } from '@/lib/middleware/withAuth';
+import { adminLimiterOptions } from '@/lib/middleware/rateLimit';
 import { updateUserAdminStatus, getUserById } from '@/lib/data/users';
 import { BadRequestError, NotFoundError } from '@/lib/utils/errors';
-
-function parseId(id: string): number {
-  if (!id) {
-    throw new BadRequestError('User ID is required');
-  }
-  const parsed = Number(id);
-  if (Number.isNaN(parsed)) {
-    throw new BadRequestError('User ID must be a valid number');
-  }
-  return parsed;
-}
+import { parseId } from '@/lib/utils/validation';
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await applyRateLimit(request, adminLimiterOptions);
-    const user = await requireAuth(request, { enforceDomain: true });
-    requireAllowedDomain(user);
-    requireSuperAdmin(user); 
+    const user = await authenticateRequest(request, {
+      rateLimitOptions: adminLimiterOptions,
+      requireSuperAdmin: true,
+      enforceDomain: true,
+    }); 
 
     const { id: idParam } = await params;
-    const id = parseId(idParam);
+    const id = parseId(idParam, 'User ID');
     const body = await request.json();
 
     if (typeof body.is_admin !== 'boolean') {

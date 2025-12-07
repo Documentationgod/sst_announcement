@@ -4,20 +4,10 @@ import { fetchAnnouncementById, mapAnnouncement } from '@/lib/data/announcements
 import { requireAuth, requireAdmin } from '@/lib/middleware/auth';
 import { requireAllowedDomain } from '@/lib/middleware/domain';
 import { BadRequestError, NotFoundError } from '@/lib/utils/errors';
+import { parseId } from '@/lib/utils/validation';
 import { getDb } from '@/lib/config/db';
 import { announcements } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
-
-function parseId(id: string): number {
-  if (!id) {
-    throw new BadRequestError('Announcement ID is required');
-  }
-  const parsed = Number(id);
-  if (Number.isNaN(parsed)) {
-    throw new BadRequestError('Announcement ID must be a valid number');
-  }
-  return parsed;
-}
 
 export async function GET(
   request: NextRequest,
@@ -26,7 +16,7 @@ export async function GET(
   try {
     await applyRateLimit(request, generalLimiterOptions);
     const { id: idParam } = await params;
-    const id = parseId(idParam);
+    const id = parseId(idParam, 'Announcement ID');
     const announcement = await fetchAnnouncementById(id);
     if (!announcement) {
       throw new NotFoundError('Announcement', id);
@@ -56,7 +46,7 @@ export async function PATCH(
     requireAdmin(user);
 
     const { id: idParam } = await params;
-    const id = parseId(idParam);
+    const id = parseId(idParam, 'Announcement ID');
     const body = await request.json();
     const updateData: Record<string, unknown> = {};
 
@@ -180,7 +170,7 @@ export async function DELETE(
     requireAdmin(user);
 
     const { id: idParam } = await params;
-    const id = parseId(idParam);
+    const id = parseId(idParam, 'Announcement ID');
     const db = getDb();
     const result = await db
       .delete(announcements)

@@ -1,18 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { applyRateLimit, adminLimiterOptions } from '@/lib/middleware/rateLimit';
-import { requireAuth, requireAdmin } from '@/lib/middleware/auth';
-import { requireAllowedDomain } from '@/lib/middleware/domain';
+import { authenticateRequest } from '@/lib/middleware/withAuth';
+import { adminLimiterOptions } from '@/lib/middleware/rateLimit';
 import { getAllUsers } from '@/lib/data/users';
 
 export async function GET(request: NextRequest) {
   try {
-    // Apply rate limiting
-    await applyRateLimit(request, adminLimiterOptions);
-    
-    // Authentication and authorization
-    const user = await requireAuth(request, { enforceDomain: true });
-    requireAllowedDomain(user);
-    requireAdmin(user);
+    const user = await authenticateRequest(request, {
+      rateLimitOptions: adminLimiterOptions,
+      enforceDomain: true,
+    });
 
     // Get all users
     const users = await getAllUsers();
