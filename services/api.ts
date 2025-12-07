@@ -5,7 +5,6 @@ import type {
   CreateAnnouncementData,
   UpdateAnnouncementData,
   ApiResponse,
-  AnalyticsStats,
   AdminDashboardData,
   AdminLimits,
   AdminConfigInfo,
@@ -132,17 +131,6 @@ class ApiService {
     })
   }
 
-  // Analytics
-  async trackEngagement(announcementId: number, eventType: 'view'|'click'|'dismiss'): Promise<ApiResponse<any>> {
-    return this.request<any>('/api/analytics/track', {
-      method: 'POST',
-      body: JSON.stringify({ announcement_id: announcementId, event_type: eventType })
-    })
-  }
-
-  async getAnalyticsStats(): Promise<ApiResponse<AnalyticsStats>> {
-    return this.request<AnalyticsStats>('/api/analytics/stats')
-  }
 
   // Admin utilities
   async getAdminLimits(): Promise<ApiResponse<AdminLimits>> {
@@ -212,6 +200,5 @@ export type {
   CreateAnnouncementData,
   UpdateAnnouncementData,
   ApiResponse,
-  AnalyticsStats,
   AdminDashboardData,
 } from '@/types'

@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { apiService } from '@/services/api';
-import type { Announcement, User, CreateAnnouncementData, UpdateAnnouncementData, AnalyticsStats } from '@/types';
+import type { Announcement, User, CreateAnnouncementData, UpdateAnnouncementData } from '@/types';
 import { useAppUser } from '@/contexts/AppUserContext';
 import { isAnnouncementExpired, formatDateTime } from '@/utils/dateUtils';
 import {
@@ -24,7 +24,6 @@ import {
   CreateAnnouncementModal,
   EditAnnouncementModal,
   DeleteConfirmModal,
-  AnalyticsModal,
   UserManagementModal,
 } from '../modals';
 import { ToastContainer } from '../ui/toast';
@@ -49,10 +48,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
-  
-  const [showAnalytics, setShowAnalytics] = useState(false);
-  const [analyticsLoading, setAnalyticsLoading] = useState(false);
-  const [analyticsStats, setAnalyticsStats] = useState<AnalyticsStats | null>(null);
   const [showUserManagement, setShowUserManagement] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [userManagementLoading, setUserManagementLoading] = useState(false);
@@ -485,7 +480,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
 
                       <div>
                         <h3 className="text-2xl font-bold text-white mb-1">Admin Controls</h3>
-                        <p className="text-gray-400">Manage your announcements and view analytics</p>
+                        <p className="text-gray-400">Manage your announcements</p>
                       </div>
                     </div>
 
@@ -503,44 +498,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                         </svg>
                         Create
-                      </Button>
-                      
-                      <Button
-                        onClick={async () => {
-                          setShowAnalytics(true);
-                          setAnalyticsLoading(true);
-                          try {
-                            const res = await apiService.getAnalyticsStats();
-                            if (res.success && res.data) {
-                              setAnalyticsStats(res.data);
-                            } else {
-                              setAnalyticsStats(null);
-                            }
-                          } finally {
-                            setAnalyticsLoading(false);
-                          }
-                        }}
-                        aria-label="Open Analytics"
-                        aria-busy={analyticsLoading}
-                        disabled={analyticsLoading}
-                        className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold px-8 py-6 rounded-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 hover:shadow-xl hover:shadow-emerald-500/50 group disabled:opacity-80 disabled:cursor-not-allowed disabled:transform-none"
-                      >
-                        {analyticsLoading ? (
-                          <span className="flex items-center gap-2">
-                            <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Loading...
-                          </span>
-                        ) : (
-                          <>
-                            <svg className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                            </svg>
-                            Analytics
-                          </>
-                        )}
                       </Button>
 
                       {isSuperAdmin && (
@@ -866,9 +823,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                                 className="h-10 w-10 p-0 text-gray-400 hover:text-white hover:bg-slate-700/50 rounded-xl transition-all duration-200"
                                 onClick={() => {
                                   const nextId = expandedId === a.id ? null : (a.id ?? null);
-                                  if (nextId && nextId !== expandedId && a.id) {
-                                    apiService.trackEngagement(a.id, 'view');
-                                  }
                                   setExpandedId(nextId);
                                 }}
                                 title={expandedId === a.id ? 'Collapse' : 'Expand'}
@@ -928,7 +882,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                       <div className="flex justify-center pt-4">
                         <Button
                           onClick={() => setAnnouncementsToShow(prev => prev + 5)}
-                          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-6 py-2 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
+                          className="bg-gray-700 hover:bg-gray-600  text-white font-semibold px-6 py-2 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
                         >
                           Load More ({sortedForRecentAnnouncements.length - announcementsToShow} remaining)
                         </Button>
@@ -972,13 +926,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
           onClose={() => setShowDeleteConfirm(null)}
           onConfirm={handleDeleteAnnouncement}
           loading={deleteLoading === showDeleteConfirm}
-        />
-
-        <AnalyticsModal
-          isOpen={showAnalytics}
-          onClose={() => setShowAnalytics(false)}
-          stats={analyticsStats}
-          loading={analyticsLoading}
         />
 
         <UserManagementModal

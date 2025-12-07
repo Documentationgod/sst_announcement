@@ -263,7 +263,7 @@ const AllAnnouncements: React.FC<AllAnnouncementsProps> = ({ onBackToDashboard }
               <div className="flex justify-center pt-6">
                 <Button
                   onClick={() => setAnnouncementsToShow(prev => prev + 6)}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-8 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
+                  className="bg-gray-700 hover:bg-gray-600 text-white font-semibold px-8 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
                 >
                   Load More ({filteredAnnouncements.length - announcementsToShow} remaining)
                 </Button>

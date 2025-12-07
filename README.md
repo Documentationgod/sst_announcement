@@ -1,6 +1,6 @@
 # SST Announcement System
 
-A comprehensive announcement management system for SCALER School of Technology, featuring Clerk authentication, real-time announcements, TV display integration, emergency alerts, email notifications, analytics dashboard, and role-based admin controls.
+A comprehensive announcement management system for SCALER School of Technology, featuring Clerk authentication, real-time announcements, TV display integration, emergency alerts, email notifications, and role-based admin controls.
 
 ## 📋 Table of Contents
 
@@ -36,9 +36,11 @@ The SST Announcement System is a full-stack Next.js application designed to mana
 - **Category System** - Organize announcements by categories (College, Tech, Tech Events, Tech Workshops, Academic, Sports, Other)
 - **Scheduling** - Schedule announcements for future publication (Super Admin only)
 - **Expiry Management** - Set expiry dates with visual indicators for expired announcements
+- **Multiple Deadlines** - Add multiple deadline entries per announcement with custom labels (e.g., "Form closes", "Interview date", "Results announced")
 - **Priority System** - Priority announcements with expiration windows (P0-P3 levels)
 - **Target Year Filtering** - Target announcements to specific student years
 - **Search & Filter** - Search announcements by title/description and filter by category
+- **Pagination** - Load announcements in batches (Dashboard: 5 items, All Announcements: 6 items) with "Load More" button
 - **TV Display Integration** - Send announcements to TV screens via `/api/tv` endpoint
 - **Email Notifications** - Send email alerts using Resend API
 - **Emergency Alerts** - Priority emergency announcements with immediate visibility
@@ -47,9 +49,6 @@ The SST Announcement System is a full-stack Next.js application designed to mana
 ### Admin Features
 - **Role-Based Access Control** - Four user roles: Student, Student Admin, Admin, Super Admin
 - **User Management** - Manage users, roles, and admin privileges (Super Admin only)
-- **Analytics Dashboard** - Track announcement views, engagement, and user activity
-- **Top Announcements** - View most viewed announcements with sorting options
-- **Engagement Tracking** - Monitor user interactions (views, clicks, dismissals)
 - **Announcement Moderation** - Review, approve, or reject announcements
 
 ### UI/UX Features
@@ -60,6 +59,10 @@ The SST Announcement System is a full-stack Next.js application designed to mana
 - **Animations** - Smooth transitions and hover effects
 - **Loading States** - Skeleton loaders and loading indicators
 - **Toast Notifications** - User-friendly feedback system
+- **Pagination** - Efficient loading of announcements with "Load More" functionality
+- **Deadline Visualization** - Visual indicators for multiple deadlines with passed/upcoming status
+- **Smart Prioritization** - Expired and deadline announcements prioritized in "Recent Announcements"
+- **Approaching Deadline Alerts** - Highlight announcements with approaching deadlines/expiries for students (within 7 days)
 
 ## 🏗️ Architecture
 
@@ -88,9 +91,6 @@ sst_announcement/
 │   │   │       │   ├── role/           # Update user role
 │   │   │       │   └── route.ts       # Get user by ID
 │   │   │       └── route.ts           # Get all users
-│   │   ├── analytics/            # Analytics endpoints
-│   │   │   ├── stats/            # Analytics statistics
-│   │   │   └── track/            # Track engagement
 │   │   ├── announcements/       # Announcement CRUD
 │   │   │   ├── [id]/             # Announcement by ID
 │   │   │   └── route.ts          # List/Create announcements
@@ -110,7 +110,6 @@ sst_announcement/
 │   │   ├── CreateAnnouncementModal.tsx
 │   │   ├── EditAnnouncementModal.tsx
 │   │   ├── DeleteConfirmModal.tsx
-│   │   ├── AnalyticsModal.tsx
 │   │   ├── UserManagementModal.tsx
 │   │   └── index.tsx             # Modal exports
 │   ├── pages/                    # Page components
@@ -248,7 +247,6 @@ sst_announcement/
 - `GET /api/announcements` - Get all announcements (with pagination: `?limit=10&offset=0`)
 - `GET /api/announcements/[id]` - Get announcement by ID
 - `GET /api/tv` - Get announcements for TV display (where `send_tv = true`, returns top 5)
-- `POST /api/analytics/track` - Track user engagement
 
 ### Authenticated Endpoints
 - `GET /api/profile` - Get current user profile
@@ -262,7 +260,6 @@ sst_announcement/
 - `GET /api/admin/users/[id]` - Get user by ID (Admin+)
 - `PATCH /api/admin/users/[id]/role` - Update user role (Super Admin only)
 - `PATCH /api/admin/users/[id]/admin-status` - Update admin status (Super Admin only)
-- `GET /api/analytics/stats` - Get analytics statistics (Admin+)
 
 ### Utility Endpoints
 - `POST /api/test-email` - Test email functionality (Admin+)
@@ -288,6 +285,7 @@ sst_announcement/
 - `created_at` - Creation timestamp (with timezone, default now)
 - `updated_at` - Last update timestamp (with timezone)
 - `expiry_date` - When announcement expires (with timezone)
+- `deadlines` - Multiple deadlines stored as JSONB array: `[{label: string, date: string}, ...]` (default: `[]`)
 - `scheduled_at` - When to publish (with timezone, Super Admin only)
 - `reminder_time` - Reminder notification time (with timezone)
 - `is_active` - Active status (boolean, default: true)
@@ -327,9 +325,12 @@ sst_announcement/
 
 ### Student
 - View active announcements
+- View announcements with deadlines regardless of status
+- View scheduled announcements once scheduled time has passed
 - Filter and search announcements
-- Cannot see scheduled announcements
+- Cannot see announcements scheduled for the future
 - Cannot create or modify announcements
+- See approaching deadline/expiry alerts (within 7 days)
 
 ### Student Admin
 - All student permissions
@@ -339,7 +340,6 @@ sst_announcement/
 
 ### Admin
 - All Student Admin permissions
-- View analytics dashboard
 - Manage all announcements (edit, delete)
 - View all users
 - Cannot manage user roles or schedule announcements
@@ -571,6 +571,16 @@ ADD COLUMN IF NOT EXISTS target_years INTEGER[];
 ```sql
 ALTER TABLE announcements 
 ADD COLUMN IF NOT EXISTS visible_after TIMESTAMPTZ;
+```
+
+**Add `deadlines` column (if needed):**
+```sql
+ALTER TABLE announcements 
+ADD COLUMN IF NOT EXISTS deadlines JSONB DEFAULT '[]'::jsonb;
+
+-- Optional: Add GIN index for better query performance
+CREATE INDEX IF NOT EXISTS idx_announcements_deadlines 
+ON announcements USING GIN (deadlines);
 ```
 
 ### Removing Unused Tables

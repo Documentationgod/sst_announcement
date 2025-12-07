@@ -90,14 +90,6 @@ export interface ApiResponse<T> {
   error?: string
 }
 
-export interface AnalyticsStats {
-  total_announcements: number
-  total_views: number
-  total_users: number
-  active_users: number
-  top_announcements: Array<{ id: number; title: string; views: number }>
-}
-
 export interface AdminDashboardData {
   totalUsers: number
   adminUsers: number
