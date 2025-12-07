@@ -1,4 +1,4 @@
-import { pgTable, serial, text, varchar, boolean, integer, timestamp, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, varchar, boolean, integer, timestamp, pgEnum, jsonb } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const userRoleEnum = pgEnum('user_role', ['student', 'student_admin', 'admin', 'super_admin', 'user']);
@@ -32,6 +32,7 @@ export const announcements = pgTable('announcements', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }),
   expiryDate: timestamp('expiry_date', { withTimezone: true }),
+  deadlines: jsonb('deadlines').default([]), // Array of {label: string, date: string}
   scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
   reminderTime: timestamp('reminder_time', { withTimezone: true }),
   isActive: boolean('is_active').default(true),

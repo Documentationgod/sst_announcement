@@ -1,4 +1,11 @@
 // API Types
+
+// Deadline interface for multiple deadlines feature
+export interface Deadline {
+  label: string;   // e.g., "Form closes", "Interview date", "Results announced"
+  date: string;    // ISO 8601 date string: "2024-01-15T23:59:59Z"
+}
+
 export interface Announcement {
   id?: number
   title: string
@@ -8,6 +15,7 @@ export interface Announcement {
   created_at?: string
   updated_at?: string
   expiry_date?: string
+  deadlines?: Deadline[] | null  // Array of deadlines: [{label: "Form closes", date: "2024-01-15T23:59:59Z"}, ...]
   scheduled_at?: string
   reminder_time?: string
   is_active?: boolean
@@ -43,6 +51,7 @@ export interface CreateAnnouncementData {
   description: string
   category: string
   expiry_date?: string
+  deadlines?: Deadline[] | null  // Array of deadlines
   scheduled_at?: string
   reminder_time?: string
   is_active?: boolean
@@ -65,6 +74,7 @@ export interface UpdateAnnouncementData {
   description?: string
   category?: string
   expiry_date?: string
+  deadlines?: Deadline[] | null  // Array of deadlines
   scheduled_at?: string
   reminder_time?: string
   is_active?: boolean

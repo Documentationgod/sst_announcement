@@ -65,6 +65,7 @@ export async function PATCH(
       description: 'description',
       category: 'category',
       expiry_date: 'expiryDate',
+      deadlines: 'deadlines',
       scheduled_at: 'scheduledAt',
       reminder_time: 'reminderTime',
       is_active: 'isActive',
@@ -77,6 +78,35 @@ export async function PATCH(
       if (body[key] !== undefined) {
         if (key === 'target_years') {
           updateData[dbField] = normalizeTargetYears(body[key]);
+        } else if (key === 'deadlines') {
+          // Handle deadlines - normalize and convert to JSON string
+          let normalizedDeadlines: any = null;
+          if (body[key] && Array.isArray(body[key]) && body[key].length > 0) {
+            normalizedDeadlines = body[key]
+              .map((d: any) => {
+                if (!d || typeof d !== 'object') return null;
+                const label = String(d.label || '').trim();
+                if (!label) return null;
+                
+                let dateStr = d.date;
+                if (dateStr) {
+                  const date = new Date(dateStr);
+                  if (isNaN(date.getTime())) return null;
+                  dateStr = date.toISOString();
+                } else {
+                  return null;
+                }
+                
+                return { label, date: dateStr };
+              })
+              .filter((d: any) => d !== null)
+              .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            
+            if (normalizedDeadlines.length === 0) {
+              normalizedDeadlines = null;
+            }
+          }
+          updateData[dbField] = normalizedDeadlines ? JSON.stringify(normalizedDeadlines) : JSON.stringify([]);
         } else if (key.endsWith('_date') || key.endsWith('_at') || key.endsWith('_time')) {
           updateData[dbField] = body[key] ? new Date(body[key]) : null;
         } else {

@@ -7,6 +7,22 @@ export type AnnouncementRecord = typeof announcements.$inferSelect;
 export function mapAnnouncement(record: AnnouncementRecord) {
   const targetYears =
     Array.isArray(record.targetYears) && record.targetYears.length > 0 ? record.targetYears : null;
+  
+  // Parse deadlines if it's a JSON string or already parsed
+  let deadlines = null;
+  if (record.deadlines) {
+    try {
+      deadlines = typeof record.deadlines === 'string' 
+        ? JSON.parse(record.deadlines) 
+        : record.deadlines;
+      if (!Array.isArray(deadlines) || deadlines.length === 0) {
+        deadlines = null;
+      }
+    } catch (e) {
+      deadlines = null;
+    }
+  }
+
   return {
     id: record.id,
     title: record.title,
@@ -16,6 +32,7 @@ export function mapAnnouncement(record: AnnouncementRecord) {
     created_at: record.createdAt,
     updated_at: record.updatedAt,
     expiry_date: record.expiryDate,
+    deadlines,
     scheduled_at: record.scheduledAt,
     reminder_time: record.reminderTime,
     is_active: record.isActive,

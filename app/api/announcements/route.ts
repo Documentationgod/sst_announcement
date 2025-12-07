@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
       description,
       category,
       expiry_date,
+      deadlines,
       scheduled_at,
       reminder_time,
       priority_until,
@@ -131,6 +132,34 @@ export async function POST(request: NextRequest) {
 
     const normalizedTargetYears = normalizeTargetYears(target_years);
 
+    // Normalize deadlines - validate and format
+    let normalizedDeadlines: any = null;
+    if (deadlines && Array.isArray(deadlines) && deadlines.length > 0) {
+      normalizedDeadlines = deadlines
+        .map((d: any) => {
+          if (!d || typeof d !== 'object') return null;
+          const label = String(d.label || '').trim();
+          if (!label) return null;
+          
+          let dateStr = d.date;
+          if (dateStr) {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return null;
+            dateStr = date.toISOString();
+          } else {
+            return null;
+          }
+          
+          return { label, date: dateStr };
+        })
+        .filter((d: any) => d !== null)
+        .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      
+      if (normalizedDeadlines.length === 0) {
+        normalizedDeadlines = null;
+      }
+    }
+
     const emergencyExpiresAtRaw = emergency_expires_at ? new Date(emergency_expires_at) : null;
     const emergencyExpiresAtDate = emergencyExpiresAtRaw && !isNaN(emergencyExpiresAtRaw.getTime()) ? emergencyExpiresAtRaw : null;
     
@@ -182,6 +211,13 @@ export async function POST(request: NextRequest) {
     }
     if (targetYearsSupported) {
       announcementValues.targetYears = normalizedTargetYears;
+    }
+    
+    // Add deadlines (store as JSON string for database)
+    if (normalizedDeadlines) {
+      announcementValues.deadlines = JSON.stringify(normalizedDeadlines);
+    } else {
+      announcementValues.deadlines = JSON.stringify([]);
     }
 
     const record = await insertAnnouncementWithFallback(db, announcementValues, {
@@ -537,6 +573,7 @@ function buildManualInsertStatement(includeTargetYears: boolean): string {
     'category',
     'author_id',
     'expiry_date',
+    'deadlines',
     'scheduled_at',
     'reminder_time',
     'is_active',
@@ -570,12 +607,17 @@ function buildManualInsertValues({
   priorityLevel: number;
   targetYearsValue: number[] | null;
 }) {
+  const deadlinesValue = values.deadlines 
+    ? (typeof values.deadlines === 'string' ? values.deadlines : JSON.stringify(values.deadlines))
+    : JSON.stringify([]);
+
   const params: any[] = [
     values.title,
     values.description,
     values.category,
     values.authorId,
     values.expiryDate ?? null,
+    deadlinesValue,
     values.scheduledAt ?? null,
     values.reminderTime ?? null,
     values.isActive ?? true,
@@ -616,6 +658,21 @@ async function resolveRecipientEmails(targetYears: number[] | null): Promise<str
 function mapRowToAnnouncement(row: any): typeof announcements.$inferSelect {
   const targetYears =
     Array.isArray(row.target_years) && row.target_years.length > 0 ? row.target_years : null;
+  
+  // Parse deadlines from JSON
+  let deadlines: any = null;
+  if (row.deadlines) {
+    try {
+      const parsed = typeof row.deadlines === 'string' ? JSON.parse(row.deadlines) : row.deadlines;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        deadlines = parsed;
+      }
+    } catch (e) {
+      console.warn('Failed to parse deadlines JSON:', e);
+      deadlines = null;
+    }
+  }
+
   return {
     id: row.id,
     title: row.title,
@@ -625,6 +682,7 @@ function mapRowToAnnouncement(row: any): typeof announcements.$inferSelect {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     expiryDate: row.expiry_date,
+    deadlines,
     scheduledAt: row.scheduled_at,
     reminderTime: row.reminder_time,
     isActive: row.is_active,

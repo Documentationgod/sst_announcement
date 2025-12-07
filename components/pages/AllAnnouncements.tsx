@@ -7,7 +7,7 @@ import { Button } from '../ui/button'
 import { apiService } from '@/services/api'
 import type { Announcement } from '@/types'
 import { useAppUser } from '@/contexts/AppUserContext'
-import { isAnnouncementExpired } from '@/utils/dateUtils'
+import { isAnnouncementExpired, formatDateTime } from '@/utils/dateUtils'
 import { getCategoryColor, getCategoryIcon } from '@/constants/categoryStyles'
 import { useToast } from '@/hooks/useToast'
 import { ToastContainer } from '../ui/toast'
@@ -24,6 +24,7 @@ const AllAnnouncements: React.FC<AllAnnouncementsProps> = ({ onBackToDashboard }
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const [announcementsToShow, setAnnouncementsToShow] = useState<number>(6)
   const { toasts, showToast, removeToast } = useToast()
 
   useEffect(() => {
@@ -70,6 +71,15 @@ const AllAnnouncements: React.FC<AllAnnouncementsProps> = ({ onBackToDashboard }
       if (selectedCategory === 'all') return true
       return announcement.category === selectedCategory
     })
+
+  // Reset announcements count when category filter changes
+  useEffect(() => {
+    setAnnouncementsToShow(6)
+  }, [selectedCategory])
+
+  // Get the announcements to display (first N announcements)
+  const displayedAnnouncements = filteredAnnouncements.slice(0, announcementsToShow)
+  const hasMoreAnnouncements = filteredAnnouncements.length > announcementsToShow
 
   return (
     <div className="min-h-screen bg-gray-950">  
@@ -141,7 +151,7 @@ const AllAnnouncements: React.FC<AllAnnouncementsProps> = ({ onBackToDashboard }
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredAnnouncements.map((announcement, index) => {
+              {displayedAnnouncements.map((announcement, index) => {
                 const isEmergency = announcement.is_emergency || false
                 const isExpired = isAnnouncementExpired(announcement)
                 return (
@@ -196,23 +206,50 @@ const AllAnnouncements: React.FC<AllAnnouncementsProps> = ({ onBackToDashboard }
                     </CardDescription>
                     
                     {/* Metadata */}
-                    <div className="flex items-center justify-between text-xs pt-4 border-t border-gray-800/30">
-                      <div className="flex items-center gap-2 text-gray-400">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        <span className="select-text cursor-text">
-                          {announcement.created_at ? new Date(announcement.created_at).toLocaleDateString() : 'Unknown date'}
-                        </span>
-                      </div>
-                      {announcement.expiry_date && (
+                    <div className="space-y-2 pt-4 border-t border-gray-800/30">
+                      <div className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2 text-gray-400">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
                           <span className="select-text cursor-text">
-                            Expires {new Date(announcement.expiry_date).toLocaleDateString()}
+                            {announcement.created_at ? new Date(announcement.created_at).toLocaleDateString() : 'Unknown date'}
                           </span>
+                        </div>
+                        {announcement.expiry_date && (
+                          <div className="flex items-center gap-2 text-gray-400">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span className="select-text cursor-text">
+                              Expires {new Date(announcement.expiry_date).toLocaleDateString()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Display Deadlines */}
+                      {announcement.deadlines && announcement.deadlines.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-2">
+                          {announcement.deadlines.map((deadline, idx) => {
+                            const deadlineDate = new Date(deadline.date);
+                            const isPassed = deadlineDate < new Date();
+                            return (
+                              <div key={idx} className={`flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-lg ${
+                                isPassed 
+                                  ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
+                                  : 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                              }`}>
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>
+                                  {deadline.label}: {formatDateTime(deadline.date, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
+                                  {isPassed && <span className="ml-1">(Passed)</span>}
+                                </span>
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -221,6 +258,17 @@ const AllAnnouncements: React.FC<AllAnnouncementsProps> = ({ onBackToDashboard }
                 )
               })}
             </div>
+
+            {hasMoreAnnouncements && filteredAnnouncements.length > 0 && (
+              <div className="flex justify-center pt-6">
+                <Button
+                  onClick={() => setAnnouncementsToShow(prev => prev + 6)}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-8 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  Load More ({filteredAnnouncements.length - announcementsToShow} remaining)
+                </Button>
+              </div>
+            )}
 
             {filteredAnnouncements.length === 0 && !loading && (
               <div className="text-center py-16 bg-gray-900/30 rounded-2xl border border-gray-800/50">

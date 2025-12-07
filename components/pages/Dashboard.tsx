@@ -65,6 +65,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [announcementsToShow, setAnnouncementsToShow] = useState<number>(5);
 
   // Determine user role with proper normalization for backward compatibility
   const derivedRole: UserRole = normalizeUserRole(user?.role, user?.is_admin);
@@ -97,6 +98,90 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
     filterByCategory(prioritizedAnnouncements, filterCategory),
     searchQuery
   );
+
+  // Custom sorting for Recent Announcements: prioritize expired and deadline announcements
+  const sortedForRecentAnnouncements = [...filteredAnnouncements].sort((a, b) => {
+    const now = new Date();
+    
+    // Check if expired
+    const aIsExpired = isAnnouncementExpired(a) || a.status === 'expired';
+    const bIsExpired = isAnnouncementExpired(b) || b.status === 'expired';
+    
+    // Check if has deadlines
+    const aHasDeadlines = a.deadlines && Array.isArray(a.deadlines) && a.deadlines.length > 0;
+    const bHasDeadlines = b.deadlines && Array.isArray(b.deadlines) && b.deadlines.length > 0;
+    
+    // Priority order:
+    // 1. Expired announcements
+    // 2. Announcements with deadlines (expired or upcoming)
+    // 3. Normal sorting
+    
+    if (aIsExpired && !bIsExpired) return -1;
+    if (!aIsExpired && bIsExpired) return 1;
+    
+    // Both expired - sort by expiry date (most recently expired first)
+    if (aIsExpired && bIsExpired) {
+      const aExpiry = a.expiry_date ? new Date(a.expiry_date) : null;
+      const bExpiry = b.expiry_date ? new Date(b.expiry_date) : null;
+      if (aExpiry && bExpiry) {
+        return bExpiry.getTime() - aExpiry.getTime(); // Most recent expiry first
+      }
+      if (aExpiry) return -1;
+      if (bExpiry) return 1;
+    }
+    
+    // Prioritize announcements with deadlines
+    if (aHasDeadlines && !bHasDeadlines) return -1;
+    if (!aHasDeadlines && bHasDeadlines) return 1;
+    
+    // Both have deadlines - sort by nearest deadline
+    if (aHasDeadlines && bHasDeadlines) {
+      let aNearestDeadline: Date | null = null;
+      let bNearestDeadline: Date | null = null;
+      
+      // Find nearest deadline for a
+      for (const deadline of a.deadlines!) {
+        if (deadline.date) {
+          const deadlineDate = new Date(deadline.date);
+          if (!isNaN(deadlineDate.getTime())) {
+            if (!aNearestDeadline || deadlineDate < aNearestDeadline) {
+              aNearestDeadline = deadlineDate;
+            }
+          }
+        }
+      }
+      
+      // Find nearest deadline for b
+      for (const deadline of b.deadlines!) {
+        if (deadline.date) {
+          const deadlineDate = new Date(deadline.date);
+          if (!isNaN(deadlineDate.getTime())) {
+            if (!bNearestDeadline || deadlineDate < bNearestDeadline) {
+              bNearestDeadline = deadlineDate;
+            }
+          }
+        }
+      }
+      
+      if (aNearestDeadline && bNearestDeadline) {
+        return aNearestDeadline.getTime() - bNearestDeadline.getTime(); // Sooner deadline first
+      }
+      if (aNearestDeadline) return -1;
+      if (bNearestDeadline) return 1;
+    }
+    
+    // Default: maintain original order (already sorted by priority)
+    return 0;
+  });
+
+  // Reset announcements count when filters change
+  useEffect(() => {
+    setAnnouncementsToShow(5);
+  }, [searchQuery, filterCategory]);
+
+  // Get the announcements to display (first N announcements)
+  const displayedAnnouncements = sortedForRecentAnnouncements.slice(0, announcementsToShow);
+  const hasMoreAnnouncements = sortedForRecentAnnouncements.length > announcementsToShow;
 
   // Clicking an announcement will record a 'view' event instead of auto-tracking on render
   const handleEditAnnouncement = (announcement: Announcement) => {
@@ -574,7 +659,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {filteredAnnouncements.slice(0, 5).map((a, index) => {
+                    {displayedAnnouncements.map((a, index) => {
                       const priorityUntil = a.priority_until ? new Date(a.priority_until) : null;
                       const isPriorityActive =
                         !!priorityUntil &&
@@ -587,6 +672,44 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                         a.status.toLowerCase() !== 'approved' &&
                         !(isEmergency && a.status.toLowerCase() === 'urgent') &&
                         (user?.is_admin || user?.role === 'super_admin');
+                      
+                      // Check for approaching expiry dates or deadlines (within 7 days) - ONLY for students
+                      const isStudent = derivedRole === 'student';
+                      let hasApproachingDate = false;
+                      let nearestApproachingDate: Date | null = null;
+                      let approachingDateLabel: string | null = null;
+                      
+                      if (isStudent) {
+                        const now = new Date();
+                        const WARNING_DAYS = 7;
+                        const warningThreshold = new Date(now.getTime() + WARNING_DAYS * 24 * 60 * 60 * 1000);
+                        
+                        // Check expiry date
+                        if (a.expiry_date) {
+                          const expiryDate = new Date(a.expiry_date);
+                          if (!isNaN(expiryDate.getTime()) && expiryDate > now && expiryDate <= warningThreshold) {
+                            nearestApproachingDate = expiryDate;
+                            approachingDateLabel = 'Expires';
+                            hasApproachingDate = true;
+                          }
+                        }
+                        
+                        // Check deadlines
+                        if (a.deadlines && Array.isArray(a.deadlines) && a.deadlines.length > 0) {
+                          for (const deadline of a.deadlines) {
+                            if (deadline.date) {
+                              const deadlineDate = new Date(deadline.date);
+                              if (!isNaN(deadlineDate.getTime()) && deadlineDate > now && deadlineDate <= warningThreshold) {
+                                if (!nearestApproachingDate || deadlineDate < nearestApproachingDate) {
+                                  nearestApproachingDate = deadlineDate;
+                                  approachingDateLabel = deadline.label || 'Deadline';
+                                  hasApproachingDate = true;
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
 
                       return (
                         <div
@@ -594,6 +717,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                           className={`group relative overflow-hidden rounded-2xl border backdrop-blur-sm transition-all duration-300 animate-in fade-in slide-in-from-left ${(isAnnouncementExpired(a) || a.status === 'expired') ? 'opacity-70 grayscale' : ''} ${
                             isEmergency || isPriorityActive
                               ? 'bg-gradient-to-r from-red-900/60 to-red-800/40 border-red-500/50 hover:border-red-400 hover:shadow-xl hover:shadow-red-500/30 border-l-4 border-l-red-500'
+                              : hasApproachingDate
+                              ? 'bg-gradient-to-r from-orange-900/60 to-orange-800/40 border-orange-500/50 hover:border-orange-400 hover:shadow-xl hover:shadow-orange-500/30 border-l-4 border-l-orange-500'
                               : `bg-gradient-to-r from-slate-800/60 to-slate-800/40 border-slate-600 hover:border-slate-600 hover:shadow-xl ${getCategoryAccentClasses(a.category)}`
                           }`}
                           style={{ animationDelay: `${index * 100}ms` }}
@@ -605,6 +730,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                                   ? 'bg-gradient-to-br from-gray-600/30 to-gray-700/30'
                                   : (isEmergency || isPriorityActive)
                                   ? 'bg-gradient-to-br from-red-500/30 to-rose-500/30'
+                                  : hasApproachingDate
+                                  ? 'bg-gradient-to-br from-orange-500/30 to-amber-500/30'
                                   : 'bg-gradient-to-br from-blue-500/20 to-purple-500/20'
                               }`}>
                                 {(isAnnouncementExpired(a) || a.status === 'expired') ? (
@@ -614,6 +741,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                                 ) : (isEmergency || isPriorityActive) ? (
                                   <svg className="h-6 w-6 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                  </svg>
+                                ) : hasApproachingDate ? (
+                                  <svg className="h-6 w-6 text-orange-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                   </svg>
                                 ) : (
                                   <svg className="h-6 w-6 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -628,6 +759,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                                       ? 'text-gray-300 group-hover:text-gray-400'
                                       : (isEmergency || isPriorityActive)
                                       ? 'text-red-100 group-hover:text-red-200'
+                                      : hasApproachingDate
+                                      ? 'text-orange-100 group-hover:text-orange-200'
                                       : 'text-white group-hover:text-blue-300'
                                   }`}>
                                     {a.title}
@@ -644,27 +777,40 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                                           🚨 EMERGENCY
                                         </Badge>
                                       )}
-                                      {showStatusBadge && (
-                                        <Badge
-                                          className={
-                                            a.status === 'rejected'
-                                              ? 'bg-red-500/20 text-red-400 border-red-400/30 px-3 py-1 text-xs font-bold capitalize'
-                                              : a.status === 'under_review'
-                                              ? 'bg-yellow-500/20 text-yellow-400 border-yellow-400/30 px-3 py-1 text-xs font-bold capitalize'
-                                              : a.status === 'scheduled'
-                                              ? 'bg-blue-500/20 text-blue-400 border-blue-400/30 px-3 py-1 text-xs font-bold capitalize'
-                                              : 'bg-slate-500/30 text-slate-200 border border-slate-500/50 px-3 py-1 text-xs font-bold capitalize'
-                                          }
-                                        >
-                                          {a.status === 'scheduled' && a.scheduled_at
-                                            ? `Scheduled: ${formatDateTime(a.scheduled_at, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}`
-                                            : a.status}
+                                      {hasApproachingDate && !isEmergency && !isPriorityActive && nearestApproachingDate && (
+                                        <Badge className="bg-orange-600/80 text-white border-orange-500/50 px-3 py-1 text-xs font-bold animate-pulse shadow-lg">
+                                          ⏰ {approachingDateLabel} {formatDateTime(nearestApproachingDate.toISOString(), { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
                                         </Badge>
                                       )}
+                                      {showStatusBadge && (() => {
+                                        // Check if scheduled time has passed - hide badge if showing "Scheduled: ..." and time has passed
+                                        const now = new Date();
+                                        const scheduledDate = a.scheduled_at ? new Date(a.scheduled_at) : null;
+                                        const isScheduledTimePassed = scheduledDate && !isNaN(scheduledDate.getTime()) && scheduledDate.getTime() < now.getTime();
+                                        
+                                        // Hide badge completely if scheduled time has passed and we're showing scheduled status
+                                        const isShowingScheduled = a.status === 'scheduled' || a.status?.toLowerCase() === 'scheduled';
+                                        if (isShowingScheduled && a.scheduled_at && isScheduledTimePassed) {
+                                          return null;
+                                        }
+                                        
+                                        // Don't show "Scheduled: ..." text if time has passed
+                                        const canShowScheduledText = isShowingScheduled && a.scheduled_at && !isScheduledTimePassed;
+                                        
+                                        return (
+                                          <Badge
+                                            className={'bg-slate-500/30 text-slate-200 border border-slate-500/50 px-3 py-1 text-xs font-bold capitalize'}
+                                          >
+                                            {canShowScheduledText
+                                              ? `Scheduled: ${formatDateTime(a.scheduled_at, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}`
+                                              : a.status}
+                                          </Badge>
+                                        );
+                                      })()}
                                     </>
                                   )}
                                 </div>
-                                <div className="flex items-center gap-3 mb-3">
+                                <div className="flex items-center gap-3 mb-3 flex-wrap">
                                   <Badge variant={getCategoryColor(a.category)} className="text-xs px-3 py-1 font-semibold capitalize">
                                     {a.category}
                                   </Badge>
@@ -672,6 +818,34 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                                   <span className="text-sm text-gray-400">
                                     {formatDateTime(a.created_at, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
                                   </span>
+                                  
+                                  {/* Display Deadlines */}
+                                  {a.deadlines && a.deadlines.length > 0 && (
+                                    <>
+                                      <span className="text-gray-500">•</span>
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        {a.deadlines.map((deadline, idx) => {
+                                          const deadlineDate = new Date(deadline.date);
+                                          const isPassed = deadlineDate < new Date();
+                                          return (
+                                            <div key={idx} className={`flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-lg ${
+                                              isPassed 
+                                                ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
+                                                : 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                                            }`}>
+                                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                              </svg>
+                                              <span>
+                                                {deadline.label}: {formatDateTime(deadline.date, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
+                                                {isPassed && <span className="ml-1">(Passed)</span>}
+                                              </span>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </>
+                                  )}
                                 </div>
                                 {isPriorityActive && (
                                   <div className="text-xs font-semibold text-red-200 mb-2">
@@ -748,6 +922,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                           <div className="text-lg text-gray-300 font-semibold">No announcements yet</div>
                           <div className="text-sm text-gray-500 mt-2">Create your first announcement to get started.</div>
                         </div>
+                      </div>
+                    )}
+                    {hasMoreAnnouncements && announcements.length > 0 && (
+                      <div className="flex justify-center pt-4">
+                        <Button
+                          onClick={() => setAnnouncementsToShow(prev => prev + 5)}
+                          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-6 py-2 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
+                        >
+                          Load More ({sortedForRecentAnnouncements.length - announcementsToShow} remaining)
+                        </Button>
                       </div>
                     )}
                   </div>

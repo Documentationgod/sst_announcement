@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
-import type { CreateAnnouncementData } from '../../types';
+import type { CreateAnnouncementData, Deadline } from '../../types';
 import { CATEGORY_OPTIONS } from '../../constants/categories';
 import { useAppUser } from '../../contexts/AppUserContext';
 import { getPriorityForCategory, priorityToNumber, numberToPriority, getPriorityDisplayName, getPriorityExamples } from '../../utils/priorityMapping';
 import { getMaxPriorityForRole, getMaxPriorityNumberForRole, canSetPriorityLevel, normalizeUserRole, hasAdminAccess } from '../../utils/announcementUtils';
-import { formatDateTime } from '../../utils/dateUtils';
- import { INTAKE_YEAR_OPTIONS } from '../../utils/studentYear';
+import { formatDateTime, formatDateForInput } from '../../utils/dateUtils';
+import { INTAKE_YEAR_OPTIONS } from '../../utils/studentYear';
 
 const DEFAULT_FORM_STATE: CreateAnnouncementData = {
   title: '',
   description: '',
   category: 'college',
   expiry_date: '',
+  deadlines: null,
   scheduled_at: '',
   reminder_time: '',
   is_active: true,
@@ -65,6 +66,7 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
   const [priorityDurationHours, setPriorityDurationHours] = useState<number>(2);
   const [emergencyDurationHours, setEmergencyDurationHours] = useState<number>(4);
   const [minScheduledDate, setMinScheduledDate] = useState<string>('');
+  const [deadlines, setDeadlines] = useState<Deadline[]>([]);
 
   const isEmergencyVariant = variant === 'emergency' || emergencyMode;
 
@@ -98,6 +100,7 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
         priority_level: initialData?.priority_level ?? autoPriorityNum,
         scheduled_at: isEmergencyVariant ? '' : (initialData?.scheduled_at || dayAfterTomorrowFormatted),
       });
+      setDeadlines(initialData?.deadlines || []);
       setPriorityDurationHours(2);
       setEmergencyDurationHours(4);
     }
@@ -172,10 +175,35 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
       emergency_expires_at: convertLocalInputToUTC(submission.emergency_expires_at) ?? undefined,
     };
 
+    // Add deadlines to submission
+    const validDeadlines = deadlines
+      .filter(d => d.label.trim() && d.date)
+      .map(d => ({
+        label: d.label.trim(),
+        date: d.date ? convertLocalInputToUTC(d.date) || d.date : d.date,
+      }));
+
+    submission.deadlines = validDeadlines.length > 0 ? validDeadlines : null;
+
     await onSubmit(submission);
     setFormData(DEFAULT_FORM_STATE);
+    setDeadlines([]);
     setPriorityDurationHours(2);
     setEmergencyDurationHours(4);
+  };
+
+  const addDeadline = () => {
+    setDeadlines([...deadlines, { label: '', date: '' }]);
+  };
+
+  const updateDeadline = (index: number, field: 'label' | 'date', value: string) => {
+    const updated = [...deadlines];
+    updated[index] = { ...updated[index], [field]: value };
+    setDeadlines(updated);
+  };
+
+  const removeDeadline = (index: number) => {
+    setDeadlines(deadlines.filter((_, i) => i !== index));
   };
 
   const toggleYearSelection = (year: number) => {
@@ -429,6 +457,67 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
 
           {!isEmergencyVariant && (
             <div className="space-y-4">
+              {/* Multiple Deadlines Section */}
+              <div className="space-y-3 bg-gray-900/30 border border-gray-800/50 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-300">
+                    <svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Deadlines (Form/Action closes)
+                  </label>
+                  <Button
+                    type="button"
+                    onClick={addDeadline}
+                    className="px-3 py-1.5 text-xs bg-orange-600/20 hover:bg-orange-600/30 text-orange-300 border border-orange-500/30 rounded-lg transition-all"
+                  >
+                    <svg className="w-4 h-4 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add Deadline
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500">e.g., "Form closes", "Interview date", "Results announced"</p>
+                
+                {deadlines.map((deadline, index) => (
+                  <div key={index} className="flex gap-2 items-end bg-gray-800/50 rounded-lg p-3 border border-gray-700/50">
+                    <div className="flex-1 space-y-2">
+                      <label className="text-xs font-medium text-gray-400">Label</label>
+                      <input
+                        type="text"
+                        value={deadline.label}
+                        onChange={(e) => updateDeadline(index, 'label', e.target.value)}
+                        placeholder="e.g., Form closes"
+                        className="w-full px-3 py-2 bg-black/70 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 text-sm"
+                      />
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <label className="text-xs font-medium text-gray-400">Date & Time</label>
+                      <input
+                        type="datetime-local"
+                        value={deadline.date ? formatDateForInput(deadline.date) : ''}
+                        onChange={(e) => updateDeadline(index, 'date', e.target.value)}
+                        className="w-full px-3 py-2 bg-black/70 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 text-sm"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeDeadline(index)}
+                      className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg transition-all"
+                      title="Remove deadline"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+                
+                {deadlines.length === 0 && (
+                  <p className="text-xs text-gray-500 italic text-center py-2">No deadlines added. Click "Add Deadline" to add one.</p>
+                )}
+              </div>
+
               <label className="flex items-center gap-2 text-sm font-semibold text-gray-300">
                 <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />

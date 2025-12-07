@@ -102,18 +102,16 @@ export const isVisibleToUser = (
   
   // Regular announcements follow normal visibility rules
   if (!hasAdminLevel && !isSuperAdmin) {
-    if (announcement.status === 'scheduled') {
-      return false
-    }
-    
-    if (announcement.category && announcement.category.toLowerCase() === 'scheduled') {
-      return false
-    }
-    
+    // Allow scheduled announcements to be visible (like policies/upcoming events)
+    // Only hide if scheduled for future (not yet time to show)
     if (announcement.scheduled_at) {
       const scheduledDate = new Date(announcement.scheduled_at)
-      if (!isNaN(scheduledDate.getTime()) && scheduledDate > now) {
-        return false
+      if (!isNaN(scheduledDate.getTime())) {
+        // Hide if scheduled for future (not yet time to show)
+        // Once scheduled time has passed, announcement is live and should be visible
+        if (scheduledDate > now) {
+          return false
+        }
       }
     }
 
@@ -140,6 +138,41 @@ export const searchAnnouncements = (announcements: Announcement[], query: string
     a.title.toLowerCase().includes(lowerQuery) || 
     a.description.toLowerCase().includes(lowerQuery)
   )
+}
+
+// Helper function to get the nearest upcoming deadline or expiry date
+function getNearestApproachingDate(announcement: Announcement, now: Date): { date: Date | null; type: 'expiry' | 'deadline' | null } {
+  const WARNING_DAYS = 7; // Show warnings for dates within 7 days
+  const warningThreshold = new Date(now.getTime() + WARNING_DAYS * 24 * 60 * 60 * 1000);
+  
+  let nearestDate: Date | null = null;
+  let nearestType: 'expiry' | 'deadline' | null = null;
+  
+  // Check expiry date
+  if (announcement.expiry_date) {
+    const expiryDate = new Date(announcement.expiry_date);
+    if (!isNaN(expiryDate.getTime()) && expiryDate > now && expiryDate <= warningThreshold) {
+      nearestDate = expiryDate;
+      nearestType = 'expiry';
+    }
+  }
+  
+  // Check deadlines
+  if (announcement.deadlines && Array.isArray(announcement.deadlines) && announcement.deadlines.length > 0) {
+    for (const deadline of announcement.deadlines) {
+      if (deadline.date) {
+        const deadlineDate = new Date(deadline.date);
+        if (!isNaN(deadlineDate.getTime()) && deadlineDate > now && deadlineDate <= warningThreshold) {
+          if (!nearestDate || deadlineDate < nearestDate) {
+            nearestDate = deadlineDate;
+            nearestType = 'deadline';
+          }
+        }
+      }
+    }
+  }
+  
+  return { date: nearestDate, type: nearestType };
 }
 
 export const sortAnnouncementsByPriority = (announcements: Announcement[], userRole: UserRole): Announcement[] => {
@@ -178,6 +211,21 @@ export const sortAnnouncementsByPriority = (announcements: Announcement[], userR
       const aDate = new Date(a.created_at || 0)
       const bDate = new Date(b.created_at || 0)
       return bDate.getTime() - aDate.getTime()
+    }
+    
+    // Prioritize announcements with approaching expiry dates or deadlines (ONLY for students)
+    // Admins, student admins, and super admins see normal priority sorting
+    if (userRole === 'student') {
+      const aApproaching = getNearestApproachingDate(a, now);
+      const bApproaching = getNearestApproachingDate(b, now);
+      
+      if (aApproaching.date && !bApproaching.date) return -1; // a has approaching date, b doesn't
+      if (!aApproaching.date && bApproaching.date) return 1;  // b has approaching date, a doesn't
+      
+      // Both have approaching dates - sort by which is sooner
+      if (aApproaching.date && bApproaching.date) {
+        return aApproaching.date.getTime() - bApproaching.date.getTime();
+      }
     }
     
     // Regular announcements follow normal priority sorting
@@ -225,7 +273,12 @@ export const filterAnnouncementsByRole = (announcements: Announcement[], userRol
       return true
     }
     
-    return announcement.status === 'active' && announcement.is_active !== false
+    // For students: show active announcements OR announcements with deadlines
+    const hasDeadlines = announcement.deadlines && Array.isArray(announcement.deadlines) && announcement.deadlines.length > 0;
+    const isActive = announcement.status === 'active' && announcement.is_active !== false;
+    
+    // Show if active OR has deadlines (so students can see deadline announcements)
+    return isActive || hasDeadlines;
   })
 }
 
