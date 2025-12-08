@@ -6,6 +6,7 @@ import { getDb } from '../config/db';
 import { users } from '../schema';
 import { mapUser } from '../data/users';
 import type { AuthenticatedUser } from '../types/index';
+import { isAllowedDomain } from '../middleware/domain';
 
 type ClerkJwtPayload = JwtPayload & {
   sub: string;
@@ -76,6 +77,19 @@ export async function syncClerkUser(claims: ClerkJwtPayload): Promise<Authentica
       throw new Error('Clerk user has no email address');
     }
     displayName = clerkUser.username || clerkUser.firstName || clerkUser.lastName || null;
+  }
+
+  // Validate email domain - CRITICAL: Block non-Scaler domains
+  if (!isAllowedDomain(email)) {
+    // Delete the Clerk user to prevent them from appearing in Clerk dashboard
+    try {
+      const clerk = getClerkClient();
+      await clerk.users.deleteUser(externalId);
+      console.log(`🚫 Deleted unauthorized Clerk user: ${email}`);
+    } catch (deleteError) {
+      console.error('Failed to delete unauthorized Clerk user:', deleteError);
+    }
+    throw new Error('Access restricted to Scaler email addresses only (@scaler.com or @sst.scaler.com)');
   }
 
   // First, try to find by clerk_id (most common case, uses index)
