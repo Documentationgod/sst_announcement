@@ -66,6 +66,16 @@ export const announcementEngagements = pgTable('announcement_engagements', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
+export const outboundClickTracking = pgTable('outbound_click_tracking', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
+  url: text('url').notNull(),
+  domain: varchar('domain', { length: 255 }).notNull(),
+  referrer: text('referrer'),
+  userAgent: text('user_agent'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   announcements: many(announcements),
   engagements: many(announcementEngagements),
@@ -96,3 +106,5 @@ export type Announcement = typeof announcements.$inferSelect;
 export type NewAnnouncement = typeof announcements.$inferInsert;
 export type AnnouncementEngagement = typeof announcementEngagements.$inferSelect;
 export type NewAnnouncementEngagement = typeof announcementEngagements.$inferInsert;
+export type OutboundClickTracking = typeof outboundClickTracking.$inferSelect;
+export type NewOutboundClickTracking = typeof outboundClickTracking.$inferInsert;
