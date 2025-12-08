@@ -117,6 +117,40 @@ const Login: React.FC = () => {
             <div className="relative group">
               <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-600 to-blue-600 rounded-3xl blur opacity-30 group-hover:opacity-40 transition duration-1000"></div>
               <div className="relative bg-black/80 backdrop-blur-xl rounded-2xl p-8 shadow-2xl border border-gray-800/50 space-y-6">
+                {/* Always show Scaler email requirement */}
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 text-blue-300 text-sm">
+                  <div className="flex items-start gap-2">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5 mt-0.5 flex-shrink-0"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <div className="flex-1">
+                      <p className="font-semibold mb-1">Scaler Email Required</p>
+                      <p className="text-blue-200/80">
+                        You must sign in with your official Scaler email address:
+                      </p>
+                      <ul className="mt-2 space-y-1 text-blue-200/80">
+                        <li className="flex items-center gap-2">
+                          <span className="text-green-400">✓</span>
+                          <code className="bg-blue-900/30 px-2 py-0.5 rounded">@scaler.com</code>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="text-green-400">✓</span>
+                          <code className="bg-blue-900/30 px-2 py-0.5 rounded">@sst.scaler.com</code>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
                 {error && (
                   <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-sm">
                     <div className="flex items-start gap-2">
@@ -218,38 +252,6 @@ const Login: React.FC = () => {
                       </div>
                     </button>
                   </SignInButton>
-                </div>
-              </div>
-            </div>
-            <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 text-blue-300 text-sm">
-              <div className="flex items-start gap-2">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 mt-0.5 flex-shrink-0"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <div className="flex-1">
-                  <p className="font-semibold mb-1">Scaler Email Required</p>
-                  <p className="text-blue-200/80">
-                    You must sign in with your official Scaler email address:
-                  </p>
-                  <ul className="mt-2 space-y-1 text-blue-200/80">
-                    <li className="flex items-center gap-2">
-                      <span className="text-green-400">✓</span>
-                      <code className="bg-blue-900/30 px-2 py-0.5 rounded">@scaler.com</code>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-green-400">✓</span>
-                      <code className="bg-blue-900/30 px-2 py-0.5 rounded">@sst.scaler.com</code>
-                    </li>
-                  </ul>
                 </div>
               </div>
             </div>
