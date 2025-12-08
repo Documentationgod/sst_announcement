@@ -12,6 +12,14 @@ export const announcementStatusEnum = pgEnum('announcement_status', [
   'expired'
 ]);
 
+// Enum for announcement category
+export const announcementCategoryEnum = pgEnum('announcement_category', [
+  'academic',
+  'sil',
+  'club',
+  'general'
+]);
+
 // Users table
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
@@ -27,7 +35,7 @@ export const announcements = pgTable('announcements', {
   id: serial('id').primaryKey(),
   title: varchar('title', { length: 255 }).notNull(),
   description: text('description').notNull(),
-  category: varchar('category', { length: 100 }).notNull(),
+  category: announcementCategoryEnum('category').notNull(),
   authorId: integer('author_id').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }),

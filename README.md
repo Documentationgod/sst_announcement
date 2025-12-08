@@ -33,7 +33,7 @@ The SST Announcement System is a full-stack Next.js application designed to mana
 ### Core Features
 - **Clerk Authentication** - Secure authentication with role-based access control
 - **Announcement Management** - Create, read, update, and delete announcements
-- **Category System** - Organize announcements by categories (College, Tech, Tech Events, Tech Workshops, Academic, Sports, Other)
+- **Category System** - Organize announcements by categories (Academic, Sil, Club, General)
 - **Scheduling** - Schedule announcements for future publication (Super Admin only)
 - **Expiry Management** - Set expiry dates with visual indicators for expired announcements
 - **Multiple Deadlines** - Add multiple deadline entries per announcement with custom labels (e.g., "Form closes", "Interview date", "Results announced")
@@ -281,7 +281,7 @@ sst_announcement/
 - `id` - Primary key (serial)
 - `title` - Announcement title (varchar 255, not null)
 - `description` - Full description (text, not null)
-- `category` - Category (varchar 100, not null): `college`, `tech`, `tech-events`, `tech-workshops`, `academic`, `sports`, `other`
+- `category` - Category enum (not null): `academic`, `sil`, `club`, `general`
 - `author_id` - Foreign key to users (integer, references users.id, onDelete: set null)
 - `created_at` - Creation timestamp (with timezone, default now)
 - `updated_at` - Last update timestamp (with timezone)

@@ -35,14 +35,10 @@ export function validateAnnouncement(data: any): ValidationErrorItem[] {
   }
 
   const validCategories = [
-    'college',
-    'tech',
-    'tech-events',
-    'tech-workshops',
     'academic',
-    'sports',
-    'cultural',
-    'other',
+    'sil',
+    'club',
+    'general',
   ];
   if (data.category && !validCategories.includes(data.category.toLowerCase())) {
     errors.push({ field: 'category', message: `Category must be one of: ${validCategories.join(', ')}` });

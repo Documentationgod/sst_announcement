@@ -4,43 +4,33 @@ import type { PriorityLevel } from '@/utils/priorityMapping'
  * Category definitions with labels and priority levels
  * Priority mapping:
  * - P1: academic (High Priority)
- * - P2: tech-events, tech-workshops, cultural (Medium Priority)
- * - P3: college, sports (Normal Priority)
+ * - P2: sil, club (Medium Priority)
+ * - P3: general (Normal Priority)
  */
 export const CATEGORY_CONFIG = {
-  'college': {
-    label: 'College',
-    priority: 'P3' as PriorityLevel,
-  },
-  'tech-events': {
-    label: 'Tech Events',
-    priority: 'P2' as PriorityLevel,
-  },
-  'tech-workshops': {
-    label: 'Tech Workshops',
-    priority: 'P2' as PriorityLevel,
-  },
   'academic': {
     label: 'Academic',
     priority: 'P1' as PriorityLevel,
   },
-  'sports': {
-    label: 'Sports',
-    priority: 'P3' as PriorityLevel,
-  },
-  'cultural': {
-    label: 'Cultural',
+  'sil': {
+    label: 'Sil',
     priority: 'P2' as PriorityLevel,
+  },
+  'club': {
+    label: 'Club',
+    priority: 'P2' as PriorityLevel,
+  },
+  'general': {
+    label: 'General',
+    priority: 'P3' as PriorityLevel,
   },
 } as const
 
 export const CATEGORIES = [
-  'college',
-  'tech-events',
-  'tech-workshops',
   'academic',
-  'sports',
-  'cultural',
+  'sil',
+  'club',
+  'general',
 ] as const satisfies readonly (keyof typeof CATEGORY_CONFIG)[]
 
 export type Category = typeof CATEGORIES[number]
