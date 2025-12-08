@@ -3,6 +3,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { apiService } from '@/services/api';
 import type { Announcement, User, CreateAnnouncementData, UpdateAnnouncementData } from '@/types';
 import { useAppUser } from '@/contexts/AppUserContext';
@@ -321,10 +323,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
 
   const getCategoryColor = (category: string) => {
     const normalized = category.toLowerCase();
-    if (['college', 'sports'].includes(normalized)) {
+    if (['general', 'clubs'].includes(normalized)) {
       return 'default';
     }
-    if (['tech', 'tech-events', 'tech-workshops', 'cultural','academic'].includes(normalized)) {
+    if (['academic', 'sil'].includes(normalized)) {
       return 'secondary';
     }
     return 'outline';
@@ -358,7 +360,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
 
             <div>
               <h1 className="text-2xl md:text-3xl font-extrabold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent tracking-tight">
-                SST Dashboard
+                SST Announcements
               </h1>
               <p className="text-sm text-gray-400">
                 Welcome back, <span className="font-semibold">{user?.username || user?.email?.split('@')[0] || 'Student'}</span>
@@ -570,27 +572,28 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                     <CardDescription className="text-gray-400">Stay updated with the latest news</CardDescription>
                   </div>
                   <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                    <input
+                    <Input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Search announcements..."
-                      className="flex-1 md:flex-initial h-11 w-full md:w-72 px-4 rounded-xl bg-slate-800/60 border border-slate-700 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      className="flex-1 md:flex-initial h-11 w-full md:w-72 px-4 rounded-xl bg-slate-800/60 border-slate-700 text-gray-200 placeholder-gray-500 focus-visible:ring-blue-500"
                     />
-                    <select
+                    <Select
                       value={filterCategory}
-                      onChange={(e) => setFilterCategory(e.target.value)}
-                      className="h-11 px-4 rounded-xl bg-slate-800/60 border border-slate-700 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                      onValueChange={(value) => setFilterCategory(value)}
                     >
-                      <option value="all">All Categories</option>
-                      <option value="college">College</option>
-                      <option value="tech-events">Tech Events</option>
-                      <option value="tech-workshops">Tech Workshops</option>
-                      <option value="tech">Tech</option>
-                      <option value="academic">Academic</option>
-                      <option value="sports">Sports</option>
-                      
-                    </select>
+                      <SelectTrigger className="h-11 w-[140px] rounded-xl bg-slate-800/60 border-slate-700 text-gray-200 focus:ring-purple-500">
+                        <SelectValue placeholder="Category" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-800 border-slate-700 text-gray-200">
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="general">General</SelectItem>
+                        <SelectItem value="academic">Academic</SelectItem>
+                        <SelectItem value="sil">SIL</SelectItem>
+                        <SelectItem value="clubs">Clubs</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <Button variant="outline" size="sm" onClick={onViewAllAnnouncements} className="h-11 border-slate-600 text-gray-300 hover:bg-slate-800 hover:text-white hover:border-slate-500 transition-all duration-200">
                       View All
                     </Button>

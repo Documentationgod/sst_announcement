@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
+import { Input } from '../ui/input'
 import { apiService } from '@/services/api'
 import type { Announcement } from '@/types'
 import { useAppUser } from '@/contexts/AppUserContext'
@@ -24,6 +25,7 @@ const AllAnnouncements: React.FC<AllAnnouncementsProps> = ({ onBackToDashboard }
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const [searchQuery, setSearchQuery] = useState<string>('')
   const [announcementsToShow, setAnnouncementsToShow] = useState<number>(6)
   const { toasts, showToast, removeToast } = useToast()
 
@@ -48,7 +50,7 @@ const AllAnnouncements: React.FC<AllAnnouncementsProps> = ({ onBackToDashboard }
     }
   }
 
-  const categories = ['all', 'college', 'tech-events', 'sports', 'cultural', 'academic']
+  const categories = ['all', 'general', 'academic', 'sil', 'clubs']
 
   // Determine user role and intake code for filtering
   const derivedRole: UserRole = normalizeUserRole(user?.role, user?.is_admin)
@@ -70,6 +72,14 @@ const AllAnnouncements: React.FC<AllAnnouncementsProps> = ({ onBackToDashboard }
     .filter(announcement => {
       if (selectedCategory === 'all') return true
       return announcement.category === selectedCategory
+    })
+    .filter(announcement => {
+      if (!searchQuery) return true
+      const query = searchQuery.toLowerCase()
+      return (
+        announcement.title.toLowerCase().includes(query) ||
+        announcement.description.toLowerCase().includes(query)
+      )
     })
 
   // Reset announcements count when category filter changes
@@ -104,26 +114,42 @@ const AllAnnouncements: React.FC<AllAnnouncementsProps> = ({ onBackToDashboard }
           </Button>
         </div>
 
-        {/* Category Filter */}
-        <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-800/50 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">Filter by Category</h3>
-            <span className="text-sm text-gray-400">{filteredAnnouncements.length} announcements</span>
+        {/* Search and Filter */}
+        <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-800/50 mb-8 space-y-6">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="relative w-full md:w-96">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <Input
+                type="text"
+                placeholder="Search announcements..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus-visible:ring-blue-500/50"
+              />
+            </div>
+            <span className="text-sm text-gray-400 whitespace-nowrap">{filteredAnnouncements.length} announcements found</span>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {categories.map((category) => (
-              <button
-                key={category}
-                onClick={() => setSelectedCategory(category)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 capitalize ${
-                  selectedCategory === category 
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' 
-                    : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700 hover:text-white border border-gray-700/50'
-                }`}
-              >
-                {category === 'all' ? 'All Categories' : category.replace('-', ' ')}
-              </button>
-            ))}
+
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider">Categories</h3>
+            <div className="flex flex-wrap gap-2">
+              {categories.map((category) => (
+                <Button
+                  key={category}
+                  variant={selectedCategory === category ? "default" : "outline"}
+                  onClick={() => setSelectedCategory(category)}
+                  className={`capitalize ${
+                    selectedCategory === category 
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white border-transparent' 
+                      : 'bg-gray-800/30 border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white'
+                  }`}
+                >
+                  {category === 'all' ? 'All' : category.replace('-', ' ')}
+                </Button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -189,7 +215,9 @@ const AllAnnouncements: React.FC<AllAnnouncementsProps> = ({ onBackToDashboard }
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${
                           isExpired 
                             ? 'bg-gray-600/50 text-gray-400' 
-                            : (isEmergency ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800')
+                            : (isEmergency 
+                                ? 'bg-red-500/20 text-red-300 border border-red-500/30' 
+                                : 'bg-blue-500/20 text-blue-300 border border-blue-500/30')
                         }`}>
                           {announcement.category.replace('-', ' ')}
                         </span>
