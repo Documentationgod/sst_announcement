@@ -13,11 +13,11 @@ export const CATEGORY_CONFIG = {
     priority: 'P1' as PriorityLevel,
   },
   'sil': {
-    label: 'Sil',
+    label: 'SIL',
     priority: 'P2' as PriorityLevel,
   },
-  'club': {
-    label: 'Club',
+  'clubs': {
+    label: 'Clubs',
     priority: 'P2' as PriorityLevel,
   },
   'general': {
@@ -29,7 +29,7 @@ export const CATEGORY_CONFIG = {
 export const CATEGORIES = [
   'academic',
   'sil',
-  'club',
+  'clubs',
   'general',
 ] as const satisfies readonly (keyof typeof CATEGORY_CONFIG)[]
 
