@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Textarea } from '../ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Label } from '../ui/label';
+import { Switch } from '../ui/switch';
 import type { CreateAnnouncementData, Deadline } from '../../types';
 import { CATEGORY_OPTIONS } from '../../constants/categories';
 import { useAppUser } from '../../contexts/AppUserContext';
@@ -271,35 +276,35 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6 bg-black custom-scrollbar">
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-300">
+            <Label className="flex items-center gap-2 text-sm font-semibold text-gray-300">
               <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
               </svg>
               Title <span className="text-red-400">*</span>
-            </label>
-            <input
+            </Label>
+            <Input
               type="text"
               required
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full px-4 py-3 bg-black/70 border border-gray-800 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-600/40 focus:border-blue-600/40 transition-all duration-200 hover:border-gray-700"
+              className="bg-black/70 border-gray-800 text-white placeholder-gray-500 focus-visible:ring-blue-600/40"
               placeholder="Enter a compelling title for your announcement"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-300">
+            <Label className="flex items-center gap-2 text-sm font-semibold text-gray-300">
               <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
               Description <span className="text-red-400">*</span>
-            </label>
-            <textarea
+            </Label>
+            <Textarea
               required
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={5}
-              className="w-full px-4 py-3 bg-black/70 border border-gray-800 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600/40 focus:border-purple-600/40 transition-all duration-200 resize-none hover:border-gray-700"
+              className="bg-black/70 border-gray-800 text-white placeholder-gray-500 focus-visible:ring-purple-600/40 resize-none"
               placeholder="Provide detailed information about your announcement..."
             />
             <p className="text-xs text-gray-500">{formData.description.length} characters</p>
@@ -391,23 +396,27 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
           )}
 
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-300">
+            <Label className="flex items-center gap-2 text-sm font-semibold text-gray-300">
               <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
               </svg>
               Category <span className="text-red-400">*</span>
-            </label>
-            <select
+            </Label>
+            <Select
               value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              className="w-full px-4 py-3 bg-black/70 border border-gray-800 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-600/40 focus:border-emerald-600/40 transition-all duration-200 hover:border-gray-700 cursor-pointer"
+              onValueChange={(value) => setFormData({ ...formData, category: value })}
             >
-              {CATEGORY_OPTIONS.map((cat) => (
-                <option key={cat.value} value={cat.value} className="bg-gray-900">
-                  {cat.label}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full bg-black/70 border-gray-800 text-white focus:ring-emerald-600/40">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-900 border-gray-800 text-white">
+                {CATEGORY_OPTIONS.map((cat) => (
+                  <SelectItem key={cat.value} value={cat.value} className="focus:bg-gray-800 focus:text-white">
+                    {cat.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
@@ -482,22 +491,22 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
                 {deadlines.map((deadline, index) => (
                   <div key={index} className="flex gap-2 items-end bg-gray-800/50 rounded-lg p-3 border border-gray-700/50">
                     <div className="flex-1 space-y-2">
-                      <label className="text-xs font-medium text-gray-400">Label</label>
-                      <input
+                      <Label className="text-xs font-medium text-gray-400">Label</Label>
+                      <Input
                         type="text"
                         value={deadline.label}
                         onChange={(e) => updateDeadline(index, 'label', e.target.value)}
                         placeholder="e.g., Form closes"
-                        className="w-full px-3 py-2 bg-black/70 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 text-sm"
+                        className="bg-black/70 border-gray-700 text-white placeholder-gray-500 focus-visible:ring-orange-500/50 h-9"
                       />
                     </div>
                     <div className="flex-1 space-y-2">
-                      <label className="text-xs font-medium text-gray-400">Date & Time</label>
-                      <input
+                      <Label className="text-xs font-medium text-gray-400">Date & Time</Label>
+                      <Input
                         type="datetime-local"
                         value={deadline.date ? formatDateForInput(deadline.date) : ''}
                         onChange={(e) => updateDeadline(index, 'date', e.target.value)}
-                        className="w-full px-3 py-2 bg-black/70 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 text-sm"
+                        className="bg-black/70 border-gray-700 text-white placeholder-gray-500 focus-visible:ring-orange-500/50 h-9 [color-scheme:dark]"
                       />
                     </div>
                     <button
@@ -526,28 +535,28 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
               </label>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <label className="flex items-center gap-1.5 text-xs font-medium text-gray-400">
+                  <Label className="flex items-center gap-1.5 text-xs font-medium text-gray-400">
                     <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     Expiry Date
-                  </label>
-                  <input
+                  </Label>
+                  <Input
                     type="datetime-local"
                     value={formData.expiry_date || ''}
                     onChange={(e) => setFormData({ ...formData, expiry_date: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-gray-800/80 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all duration-200 hover:border-gray-600"
+                    className="bg-gray-800/80 border-gray-700 text-white placeholder-gray-500 focus-visible:ring-cyan-500/50 [color-scheme:dark]"
                   />
                 </div>
                 {hasAdmin && (
                   <div className="space-y-2">
-                    <label className="flex items-center gap-1.5 text-xs font-medium text-gray-400">
+                    <Label className="flex items-center gap-1.5 text-xs font-medium text-gray-400">
                       <svg className="w-3.5 h-3.5 text-cyan-500/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                       Scheduled At
-                    </label>
-                    <input
+                    </Label>
+                    <Input
                       type="datetime-local"
                       value={formData.scheduled_at || ''}
                       onChange={(e) => {
@@ -571,22 +580,22 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
                         }
                       }}
                       min={minScheduledDate}
-                      className="w-full px-4 py-2.5 bg-gray-800/80 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all duration-200 hover:border-gray-600"
+                      className="bg-gray-800/80 border-gray-700 text-white placeholder-gray-500 focus-visible:ring-cyan-500/50 [color-scheme:dark]"
                     />
                   </div>
                 )}
                 <div className="space-y-2">
-                  <label className="flex items-center gap-1.5 text-xs font-medium text-gray-400">
+                  <Label className="flex items-center gap-1.5 text-xs font-medium text-gray-400">
                     <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                     </svg>
                     Reminder Time
-                  </label>
-                  <input
+                  </Label>
+                  <Input
                     type="datetime-local"
                     value={formData.reminder_time || ''}
                     onChange={(e) => setFormData({ ...formData, reminder_time: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-gray-800/80 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all duration-200 hover:border-gray-600"
+                    className="bg-gray-800/80 border-gray-700 text-white placeholder-gray-500 focus-visible:ring-cyan-500/50 [color-scheme:dark]"
                   />
                 </div>
               </div>
@@ -624,86 +633,19 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
                     </span>
                   </div>
                 </div>
-                <label className={`relative inline-flex items-center ${isEmergencyVariant ? 'cursor-not-allowed opacity-70' : 'cursor-pointer group-hover:scale-105'} transition-transform duration-200`}>
-                  <input
-                    type="checkbox"
-                    checked={isEmergencyVariant ? true : (formData.is_active ?? true)}
-                    onChange={(e) => {
-                      if (!isEmergencyVariant) {
-                        setFormData({ ...formData, is_active: e.target.checked });
-                      }
-                    }}
-                    disabled={isEmergencyVariant}
-                    className="sr-only"
-                  />
-                  <div className={`relative w-14 h-7 rounded-full transition-all duration-300 ease-in-out ${
-                    (formData.is_active ?? true) || isEmergencyVariant
-                      ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/50' 
-                      : 'bg-gray-700 border border-gray-600'
-                  }`}>
-                    <div className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ease-in-out ${
-                      (formData.is_active ?? true) || isEmergencyVariant ? 'translate-x-7' : 'translate-x-0'
-                    }`}>
-                      {((formData.is_active ?? true) || isEmergencyVariant) && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <svg className="w-4 h-4 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </label>
+                <Switch
+                  checked={isEmergencyVariant ? true : (formData.is_active ?? true)}
+                  onCheckedChange={(checked) => {
+                    if (!isEmergencyVariant) {
+                      setFormData({ ...formData, is_active: checked });
+                    }
+                  }}
+                  disabled={isEmergencyVariant}
+                  className={`${isEmergencyVariant ? 'opacity-70' : ''} data-[state=checked]:bg-emerald-600 data-[state=unchecked]:bg-gray-700 [&_span]:bg-white border-gray-600`}
+                />
               </div>
 
               <div className="h-px bg-gray-800/50"></div>
-
-              <div className="flex items-center justify-between group">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg transition-colors duration-200 ${
-                    formData.send_email 
-                      ? 'bg-blue-500/20 text-blue-400' 
-                      : 'bg-gray-800/50 text-gray-500'
-                  }`}>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <span className="text-sm font-semibold text-gray-200 block">
-                      Send Email Notification
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {formData.send_email ? 'Users will receive email alerts' : 'No email will be sent'}
-                    </span>
-                  </div>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer group-hover:scale-105 transition-transform duration-200">
-                  <input
-                    type="checkbox"
-                    checked={formData.send_email ?? false}
-                    onChange={(e) => setFormData({ ...formData, send_email: e.target.checked })}
-                    className="sr-only"
-                  />
-                  <div className={`relative w-14 h-7 rounded-full transition-all duration-300 ease-in-out ${
-                    formData.send_email 
-                      ? 'bg-gradient-to-r from-blue-500 to-blue-600 shadow-lg shadow-blue-500/50' 
-                      : 'bg-gray-700 border border-gray-600'
-                  }`}>
-                    <div className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ease-in-out ${
-                      formData.send_email ? 'translate-x-7' : 'translate-x-0'
-                    }`}>
-                      {formData.send_email && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </label>
-              </div>
 
               <div className="flex items-center justify-between group">
                 <div className="flex items-center gap-3">
@@ -725,31 +667,11 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
                     </span>
                   </div>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer group-hover:scale-105 transition-transform duration-200">
-                  <input
-                    type="checkbox"
-                    checked={formData.send_tv ?? false}
-                    onChange={(e) => setFormData({ ...formData, send_tv: e.target.checked })}
-                    className="sr-only"
-                  />
-                  <div className={`relative w-14 h-7 rounded-full transition-all duration-300 ease-in-out ${
-                    formData.send_tv 
-                      ? 'bg-gradient-to-r from-purple-500 to-purple-600 shadow-lg shadow-purple-500/50' 
-                      : 'bg-gray-700 border border-gray-600'
-                  }`}>
-                    <div className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ease-in-out ${
-                      formData.send_tv ? 'translate-x-7' : 'translate-x-0'
-                    }`}>
-                      {formData.send_tv && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <svg className="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </label>
+                <Switch
+                  checked={formData.send_tv ?? false}
+                  onCheckedChange={(checked) => setFormData({ ...formData, send_tv: checked })}
+                  className="data-[state=checked]:bg-purple-600 data-[state=unchecked]:bg-gray-700 [&_span]:bg-white border-gray-600"
+                />
               </div>
             </div>
           </div>
