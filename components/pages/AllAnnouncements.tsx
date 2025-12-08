@@ -126,7 +126,7 @@ const AllAnnouncements: React.FC<AllAnnouncementsProps> = ({ onBackToDashboard }
                 placeholder="Search announcements..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus-visible:ring-blue-500/50"
+                className="pl-10 bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus-visible:ring-0 focus-visible:ring-offset-0"
               />
             </div>
             <span className="text-sm text-gray-400 whitespace-nowrap">{filteredAnnouncements.length} announcements found</span>
@@ -140,13 +140,13 @@ const AllAnnouncements: React.FC<AllAnnouncementsProps> = ({ onBackToDashboard }
                   key={category}
                   variant={selectedCategory === category ? "default" : "outline"}
                   onClick={() => setSelectedCategory(category)}
-                  className={`capitalize ${
+                  className={`${
                     selectedCategory === category 
                       ? 'bg-blue-600 hover:bg-blue-700 text-white border-transparent' 
                       : 'bg-gray-800/30 border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white'
                   }`}
                 >
-                  {category === 'all' ? 'All' : category.replace('-', ' ')}
+                  {category === 'all' ? 'All' : category === 'sil' ? 'SIL' : category.charAt(0).toUpperCase() + category.slice(1).replace('-', ' ')}
                 </Button>
               ))}
             </div>
@@ -212,14 +212,14 @@ const AllAnnouncements: React.FC<AllAnnouncementsProps> = ({ onBackToDashboard }
                           </span>
                         )}
                         
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           isExpired 
                             ? 'bg-gray-600/50 text-gray-400' 
                             : (isEmergency 
                                 ? 'bg-red-500/20 text-red-300 border border-red-500/30' 
                                 : 'bg-blue-500/20 text-blue-300 border border-blue-500/30')
                         }`}>
-                          {announcement.category.replace('-', ' ')}
+                          {announcement.category === 'sil' ? 'SIL' : announcement.category.charAt(0).toUpperCase() + announcement.category.slice(1).replace('-', ' ')}
                         </span>
                       </div>
                     </div>

@@ -577,13 +577,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Search announcements..."
-                      className="flex-1 md:flex-initial h-11 w-full md:w-72 px-4 rounded-xl bg-slate-800/60 border-slate-700 text-gray-200 placeholder-gray-500 focus-visible:ring-blue-500"
+                      className="flex-1 md:flex-initial h-11 w-full md:w-72 px-4 rounded-xl bg-slate-800/60 border-slate-700 text-gray-200 placeholder-gray-500 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                     <Select
                       value={filterCategory}
                       onValueChange={(value) => setFilterCategory(value)}
                     >
-                      <SelectTrigger className="h-11 w-[140px] rounded-xl bg-slate-800/60 border-slate-700 text-gray-200 focus:ring-purple-500">
+                      <SelectTrigger className="h-11 w-[140px] rounded-xl bg-slate-800/60 border-slate-700 text-gray-200 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0">
                         <SelectValue placeholder="Category" />
                       </SelectTrigger>
                       <SelectContent className="bg-slate-800 border-slate-700 text-gray-200">
