@@ -1,7 +1,9 @@
 # Clerk Domain Restriction Setup Guide
 
 ## Problem
+
 When users try to sign in with non-Scaler emails, there are delays and multiple redirections because:
+
 1. Clerk allows the sign-in first
 2. Our backend then detects invalid domain
 3. Backend deletes the Clerk user
@@ -31,6 +33,7 @@ When users try to sign in with non-Scaler emails, there are delays and multiple 
 ### Benefits
 
 After this setup:
+
 - ✅ Non-Scaler emails will be rejected **immediately** at Clerk's sign-in screen
 - ✅ No backend delays or redirections
 - ✅ Users see clear error message from Clerk
@@ -41,13 +44,13 @@ After this setup:
 
 1. Try signing in with a non-Scaler email (e.g., `test@gmail.com`)
    - Should see immediate error from Clerk: "This email address is not allowed"
-   
 2. Try signing in with a Scaler email (e.g., `user@scaler.com`)
    - Should sign in successfully without delays
 
 ## Current Backend Protection (Still Active)
 
 Our backend still has multiple layers of protection as fallback:
+
 - Domain validation in `lib/services/clerk.ts` (deletes unauthorized Clerk users)
 - Domain validation in `lib/data/users.ts` (blocks database operations)
 - Middleware protection in `middleware.ts`
