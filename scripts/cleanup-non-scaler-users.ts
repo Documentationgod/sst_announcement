@@ -5,9 +5,12 @@
  * the allowed Scaler domains (@scaler.com or @sst.scaler.com)
  * 
  * Usage:
- *   npx tsx scripts/cleanup-non-scaler-users.ts
+ *   npm run cleanup-users
+ * 
+ * Note: Make sure your .env file is properly configured
  */
 
+import { eq } from 'drizzle-orm';
 import { getDb } from '../lib/config/db';
 import { users } from '../lib/schema';
 import { isAllowedDomain } from '../lib/middleware/domain';
