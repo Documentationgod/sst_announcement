@@ -37,15 +37,16 @@ const Login: React.FC = () => {
     // Check immediately
     checkError()
     
-    // Check every 500ms to catch errors set during redirects
-    const interval = setInterval(checkError, 500)
+    // Check every 300ms to catch errors set during redirects (more frequent)
+    const interval = setInterval(checkError, 300)
     
     return () => clearInterval(interval)
   }, [error])
 
   useEffect(() => {
     if (error) {
-      const timer = setTimeout(() => clearError(), 10000)
+      // Keep toast visible for 15 seconds
+      const timer = setTimeout(() => clearError(), 15000)
       return () => clearTimeout(timer)
     }
   }, [error, clearError])
@@ -56,12 +57,12 @@ const Login: React.FC = () => {
     <div className="relative min-h-screen overflow-hidden">
       {/* Toast notification for non-Scaler email error */}
       {error && (
-        <div className="fixed top-6 right-6 z-50 animate-in slide-in-from-top-5 fade-in duration-300">
-          <div className="bg-white rounded-lg shadow-2xl border border-gray-200 p-4 min-w-[400px] max-w-md">
+        <div className="fixed top-6 right-6 z-[9999] animate-in slide-in-from-top-5 fade-in duration-300">
+          <div className="bg-white rounded-lg shadow-2xl border-2 border-red-200 p-4 min-w-[350px] max-w-md">
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-5 h-5 rounded-full bg-red-100 flex items-center justify-center mt-0.5">
+              <div className="flex-shrink-0 w-6 h-6 rounded-full bg-red-500 flex items-center justify-center mt-0.5">
                 <svg 
-                  className="w-3 h-3 text-red-600" 
+                  className="w-4 h-4 text-white" 
                   fill="currentColor" 
                   viewBox="0 0 20 20"
                 >
@@ -73,8 +74,11 @@ const Login: React.FC = () => {
                 </svg>
               </div>
               <div className="flex-1 pt-0.5">
-                <p className="text-sm font-semibold text-gray-900">
+                <p className="text-sm font-semibold text-gray-900 mb-1">
                   Please use your Scaler email
+                </p>
+                <p className="text-xs text-gray-600">
+                  Only @scaler.com or @sst.scaler.com emails are allowed
                 </p>
               </div>
               <button
