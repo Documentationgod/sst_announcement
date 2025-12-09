@@ -64,8 +64,6 @@ async function cleanupNonScalerUsers() {
   }
 }
 
-// Import eq function
-import { eq } from 'drizzle-orm';
 
 // Run the cleanup
 cleanupNonScalerUsers()
