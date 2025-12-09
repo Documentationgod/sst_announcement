@@ -1,13 +1,16 @@
 # Scaler Email Domain Restriction Setup
 
 ## Overview
+
 This application now restricts access to users with **Scaler email addresses only**:
+
 - `@scaler.com`
 - `@sst.scaler.com`
 
 ## ✅ What's Been Implemented
 
 ### 1. **Code-Level Restrictions**
+
 - **Clerk User Sync** (`lib/services/clerk.ts`): Validates email domain before storing user in database
 - **Middleware** (`middleware.ts`): Integrates Clerk middleware for route protection
 - **Domain Validation** (`lib/middleware/domain.ts`): Enhanced error messages for unauthorized domains
@@ -15,7 +18,9 @@ This application now restricts access to users with **Scaler email addresses onl
 - **Login Page** (`components/pages/Login.tsx`): Shows clear message about allowed email domains
 
 ### 2. **Automatic Cleanup**
+
 When a non-Scaler email tries to log in:
+
 1. ✅ The user is **deleted from Clerk** (won't appear in Clerk dashboard)
 2. ✅ The user is **not stored in your database**
 3. ✅ The user is **automatically signed out**
@@ -56,6 +61,7 @@ To prevent non-Scaler emails from even reaching the sign-in flow, you **must** c
 ## 📋 Testing the Restrictions
 
 ### Test Case 1: Non-Scaler Email
+
 1. Try to sign in with a Gmail/Yahoo/etc. email
 2. Expected behavior:
    - User can attempt Google sign-in via Clerk modal
@@ -65,6 +71,7 @@ To prevent non-Scaler emails from even reaching the sign-in flow, you **must** c
    - No entry in your database
 
 ### Test Case 2: Scaler Email
+
 1. Sign in with `user@scaler.com` or `user@sst.scaler.com`
 2. Expected behavior:
    - Successful authentication
@@ -91,12 +98,14 @@ This implementation provides **3 layers of security**:
 ## 🚨 Important Notes
 
 ### For Development
+
 - Make sure you have Scaler email access for testing
 - If you need to test with a non-Scaler email temporarily, you'll need to:
   1. Modify `ALLOWED_DOMAINS` in `lib/middleware/domain.ts`
   2. Restart the development server
 
 ### For Production
+
 - **Always use Clerk Dashboard restrictions** for best user experience
 - Code-level restrictions are a backup, not the primary defense
 - Monitor Clerk logs for unauthorized access attempts
@@ -104,20 +113,26 @@ This implementation provides **3 layers of security**:
 ## 🔍 Troubleshooting
 
 ### Issue: Users with non-Scaler emails are still getting in
+
 **Solution:** Check these in order:
+
 1. Verify Clerk Dashboard has domain restrictions configured
 2. Clear browser cache and cookies
 3. Check environment variables are set correctly
 4. Verify `ALLOWED_DOMAINS` in `lib/middleware/domain.ts`
 
 ### Issue: Scaler users can't log in
+
 **Solution:**
+
 1. Verify the email domain is exactly `@scaler.com` or `@sst.scaler.com`
 2. Check Clerk Dashboard allowlist includes both domains
 3. Check server logs for specific error messages
 
 ### Issue: User appears in Clerk Dashboard but not in app
+
 **Solution:** This is expected behavior:
+
 - The user authenticated with Clerk briefly
 - Code detected non-Scaler domain
 - User was deleted from Clerk and logged out
@@ -142,6 +157,7 @@ CLERK_SECRET_KEY=sk_test_...
 ## 📞 Support
 
 If you encounter issues:
+
 1. Check the browser console for client-side errors
 2. Check server logs for backend errors
 3. Verify Clerk Dashboard configuration
