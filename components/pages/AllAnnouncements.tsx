@@ -95,7 +95,7 @@ const AllAnnouncements: React.FC<AllAnnouncementsProps> = ({ onBackToDashboard }
     <div className="min-h-screen bg-gray-950">  
       <div className="container mx-auto px-4 py-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8 bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-800/50">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8 bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-800/50">
           <div>
             <h1 className="text-3xl font-bold text-white mb-2">
               All Announcements
@@ -105,7 +105,7 @@ const AllAnnouncements: React.FC<AllAnnouncementsProps> = ({ onBackToDashboard }
           <Button
             onClick={onBackToDashboard}
             variant="outline"
-            className="border-gray-700 text-gray-300 bg-transparent hover:bg-gray-800 hover:text-white transition-all duration-200"
+            className="w-full md:w-auto border-gray-700 text-gray-300 bg-transparent hover:bg-gray-800 hover:text-white transition-all duration-200"
           >
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -198,7 +198,7 @@ const AllAnnouncements: React.FC<AllAnnouncementsProps> = ({ onBackToDashboard }
                     isExpired ? 'bg-gray-600' : (isEmergency ? 'bg-red-500' : 'bg-blue-500')
                   }`}></div>
                   
-                  <CardHeader className="relative pb-4">
+                  <CardHeader className="relative p-4 md:p-6 pb-4 md:pb-4">
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
                         {isExpired && (
@@ -223,12 +223,12 @@ const AllAnnouncements: React.FC<AllAnnouncementsProps> = ({ onBackToDashboard }
                         </span>
                       </div>
                     </div>
-                    <CardTitle className="text-xl font-bold text-white leading-tight select-text cursor-text mb-2">
+                    <CardTitle className="text-lg md:text-xl font-bold text-white leading-tight select-text cursor-text mb-2">
                       {announcement.title}
                     </CardTitle>
                   </CardHeader>
                   
-                  <CardContent className="relative">
+                  <CardContent className="relative p-4 md:p-6 pt-0 md:pt-0">
                     <CardDescription className="text-sm text-gray-300 leading-relaxed mb-4 select-text cursor-text">
                       {parseLinks(announcement.description)}
                     </CardDescription>

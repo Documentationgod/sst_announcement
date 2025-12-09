@@ -461,22 +461,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
             {/* Admin Actions Card */}
             {canDoAdminActions && (
               <Card className="bg-gray-900/80 backdrop-blur-xl border border-gray-800/60 shadow-2xl hover:shadow-blue-500/20 transition-all duration-300 animate-in fade-in slide-in-from-top duration-500">
-                <CardContent className="p-8">
+                <CardContent className="p-6 md:p-8">
                   <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
                     <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg transform hover:scale-110 transition-transform duration-300">
-                        <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg transform hover:scale-110 transition-transform duration-300">
+                        <svg className="w-6 h-6 md:w-8 md:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
                         </svg>
                       </div>
 
                       <div>
-                        <h3 className="text-2xl font-bold text-white mb-1">Admin Controls</h3>
-                        <p className="text-gray-400">Manage your announcements</p>
+                        <h3 className="text-xl md:text-2xl font-bold text-white mb-1">Admin Controls</h3>
+                        <p className="text-sm md:text-base text-gray-400">Manage your announcements</p>
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-3 justify-center">
+                    <div className="flex flex-wrap gap-3 justify-center w-full lg:w-auto">
                       <Button
                         onClick={() => {
                           setCreateModalVariant('standard');
@@ -484,7 +484,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                           setShowCreateForm(true);
                         }}
                         aria-label="Create Announcement"
-                        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-8 py-6 rounded-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 hover:shadow-xl hover:shadow-purple-500/50 group"
+                        className="flex-1 lg:flex-none bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-6 py-4 md:px-8 md:py-6 rounded-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 hover:shadow-xl hover:shadow-purple-500/50 group"
                       >
                         <svg className="w-5 h-5 mr-2 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -505,7 +505,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                             setShowCreateForm(true);
                           }}
                           aria-label="Trigger Emergency Broadcast"
-                          className="bg-gradient-to-r from-red-700 via-red-600 to-orange-500 hover:from-red-800 hover:via-red-700 hover:to-orange-600 text-white font-semibold px-8 py-6 rounded-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 hover:shadow-xl hover:shadow-red-600/50 group"
+                          className="flex-1 lg:flex-none bg-gradient-to-r from-red-700 via-red-600 to-orange-500 hover:from-red-800 hover:via-red-700 hover:to-orange-600 text-white font-semibold px-6 py-4 md:px-8 md:py-6 rounded-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 hover:shadow-xl hover:shadow-red-600/50 group"
                         >
                           <svg className="w-5 h-5 mr-2 group-hover:animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 18a2 2 0 01-1 1.732l-7 4a2 2 0 01-2 0l-7-4A2 2 0 013 18V6a2 2 0 011-1.732l7-4a2 2 0 012 0l7 4A2 2 0 0121 6z" />
@@ -583,7 +583,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                       value={filterCategory}
                       onValueChange={(value) => setFilterCategory(value)}
                     >
-                      <SelectTrigger className="h-11 w-[140px] rounded-xl bg-slate-800/60 border-slate-700 text-gray-200 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0">
+                      <SelectTrigger className="h-11 w-full md:w-[140px] rounded-xl bg-slate-800/60 border-slate-700 text-gray-200 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0">
                         <SelectValue placeholder="Category" />
                       </SelectTrigger>
                       <SelectContent className="bg-slate-800 border-slate-700 text-gray-200">
@@ -594,7 +594,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                         <SelectItem value="clubs">Clubs</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Button variant="outline" size="sm" onClick={onViewAllAnnouncements} className="h-11 border-slate-600 text-gray-300 hover:bg-slate-800 hover:text-white hover:border-slate-500 transition-all duration-200">
+                    <Button variant="outline" size="sm" onClick={onViewAllAnnouncements} className="h-11 w-full md:w-auto border-slate-600 text-gray-300 hover:bg-slate-800 hover:text-white hover:border-slate-500 transition-all duration-200">
                       View All
                     </Button>
                   </div>
@@ -673,9 +673,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                           }`}
                           style={{ animationDelay: `${index * 100}ms` }}
                         >
-                          <div className="relative flex items-start justify-between p-6 gap-4">
-                            <div className="flex items-start gap-4 min-w-0 flex-1">
-                              <div className={`mt-1 flex h-12 w-12 items-center justify-center rounded-xl ring-2 ring-white/10 group-hover:scale-110 transition-transform duration-300 ${
+                          <div className="relative flex flex-col sm:flex-row items-start justify-between p-4 md:p-6 gap-4">
+                            <div className="flex items-start gap-3 md:gap-4 min-w-0 flex-1 w-full">
+                              <div className={`mt-1 flex h-10 w-10 md:h-12 md:w-12 shrink-0 items-center justify-center rounded-xl ring-2 ring-white/10 group-hover:scale-110 transition-transform duration-300 ${
                                 (isAnnouncementExpired(a) || a.status === 'expired')
                                   ? 'bg-gradient-to-br from-gray-600/30 to-gray-700/30'
                                   : (isEmergency || isPriorityActive)
@@ -685,26 +685,26 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                                   : 'bg-gradient-to-br from-blue-500/20 to-purple-500/20'
                               }`}>
                                 {(isAnnouncementExpired(a) || a.status === 'expired') ? (
-                                  <svg className="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <svg className="h-5 w-5 md:h-6 md:w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                   </svg>
                                 ) : (isEmergency || isPriorityActive) ? (
-                                  <svg className="h-6 w-6 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <svg className="h-5 w-5 md:h-6 md:w-6 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                   </svg>
                                 ) : hasApproachingDate ? (
-                                  <svg className="h-6 w-6 text-orange-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <svg className="h-5 w-5 md:h-6 md:w-6 text-orange-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                   </svg>
                                 ) : (
-                                  <svg className="h-6 w-6 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <svg className="h-5 w-5 md:h-6 md:w-6 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h8M5 6a2 2 0 00-2 2v8a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2H5z" />
                                   </svg>
                                 )}
                               </div>
                               <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-3 mb-2 flex-wrap">
-                                  <div className={`text-lg font-bold transition-colors duration-200 ${
+                                <div className="flex items-center gap-2 md:gap-3 mb-2 flex-wrap">
+                                  <div className={`text-base md:text-lg font-bold transition-colors duration-200 ${
                                     (isAnnouncementExpired(a) || a.status === 'expired')
                                       ? 'text-gray-300 group-hover:text-gray-400'
                                       : (isEmergency || isPriorityActive)
@@ -809,7 +809,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                                 )}
                               </div>
                             </div>
-                            <div className="flex items-center gap-2 opacity-70 group-hover:opacity-100 transition-opacity duration-200">
+                            <div className="flex sm:flex-col md:flex-row items-center gap-2 w-full sm:w-auto justify-end mt-2 sm:mt-0 opacity-100 md:opacity-70 md:group-hover:opacity-100 transition-opacity duration-200">
                               <Button
                                 variant="ghost"
                                 size="sm"

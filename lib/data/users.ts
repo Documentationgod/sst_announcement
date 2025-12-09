@@ -4,8 +4,14 @@ import { getDb } from '../config/db';
 import { users } from '../schema';
 import type { UserRole } from '../types/index';
 import { getYearMetadataFromEmail } from '@/utils/studentYear';
+import { isAllowedDomain } from '../middleware/domain';
 
 export async function findOrCreateUser(clerkId: string, email: string, displayName?: string) {
+  // Validate email domain before any database operations
+  if (!isAllowedDomain(email)) {
+    throw new Error('Access restricted to Scaler email addresses only (@scaler.com or @sst.scaler.com)');
+  }
+
   const db = getDb();
   const existingUser = await db.select().from(users).where(eq(users.clerkId, clerkId)).limit(1);
 
@@ -68,7 +74,10 @@ export async function getAllUsers() {
     .from(users)
     .orderBy(desc(users.createdAt));
 
-  return result.map((user): any => {
+  // Filter out non-Scaler emails
+  const filteredResult = result.filter(user => isAllowedDomain(user.email));
+
+  return filteredResult.map((user): any => {
     const yearMetadata = getYearMetadataFromEmail(user.email);
     return {
       id: user.id,

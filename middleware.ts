@@ -1,6 +1,19 @@
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextRequest, NextResponse } from 'next/server';
 
-export function middleware(request: NextRequest) {
+const isPublicRoute = createRouteMatcher([
+  '/',
+  '/sign-in(.*)', 
+  '/sign-up(.*)', 
+  '/api/webhooks(.*)'
+]);
+
+export default clerkMiddleware(async (auth, request: NextRequest) => {
+  // Don't protect public routes - let components handle auth checks
+  if (!isPublicRoute(request)) {
+    await auth.protect();
+  }
+
   if (request.nextUrl.pathname.startsWith('/api')) {
     if (request.method === 'OPTIONS') {
       return new NextResponse(null, {
@@ -23,8 +36,13 @@ export function middleware(request: NextRequest) {
   }
 
   return NextResponse.next();
-}
+});
 
 export const config = {
-  matcher: '/api/:path*',
+  matcher: [
+    // Skip Next.js internals and static files
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    // Always run for API routes
+    '/(api|trpc)(.*)',
+  ],
 };

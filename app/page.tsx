@@ -58,13 +58,9 @@ function AppContent() {
   }
 
   if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="space-y-4 text-center">
-          <p className="text-white/80 text-lg">{error || 'Unable to load your profile. Please try signing in again.'}</p>
-        </div>
-      </div>
-    )
+    // If there's an error (like domain restriction), the user is signed out automatically
+    // Show login page instead of error in the middle of the screen
+    return <Login />
   }
 
   return (

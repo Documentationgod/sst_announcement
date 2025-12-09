@@ -23,9 +23,30 @@ const Login: React.FC = () => {
     }
   }, [])
 
+  // Check for error on mount and periodically (in case it was set during redirect)
+  useEffect(() => {
+    const checkError = () => {
+      if (typeof window !== "undefined") {
+        const storedError = localStorage.getItem(AUTH_ERROR_STORAGE_KEY)
+        if (storedError && storedError !== error) {
+          setError(storedError)
+        }
+      }
+    }
+    
+    // Check immediately
+    checkError()
+    
+    // Check every 300ms to catch errors set during redirects (more frequent)
+    const interval = setInterval(checkError, 300)
+    
+    return () => clearInterval(interval)
+  }, [error])
+
   useEffect(() => {
     if (error) {
-      const timer = setTimeout(() => clearError(), 10000)
+      // Keep toast visible for 15 seconds
+      const timer = setTimeout(() => clearError(), 15000)
       return () => clearTimeout(timer)
     }
   }, [error, clearError])
@@ -34,6 +55,56 @@ const Login: React.FC = () => {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
+      {/* Toast notification for non-Scaler email error */}
+      {error && (
+        <div className="fixed top-6 right-6 z-[9999] animate-in slide-in-from-top-5 fade-in duration-300">
+          <div className="bg-white rounded-lg shadow-2xl border-2 border-red-200 p-4 min-w-[350px] max-w-md">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-6 h-6 rounded-full bg-red-500 flex items-center justify-center mt-0.5">
+                <svg 
+                  className="w-4 h-4 text-white" 
+                  fill="currentColor" 
+                  viewBox="0 0 20 20"
+                >
+                  <path 
+                    fillRule="evenodd" 
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" 
+                    clipRule="evenodd" 
+                  />
+                </svg>
+              </div>
+              <div className="flex-1 pt-0.5">
+                <p className="text-sm font-semibold text-gray-900 mb-1">
+                  Please use your Scaler email
+                </p>
+                <p className="text-xs text-gray-600">
+                  Only @scaler.com or @sst.scaler.com emails are allowed
+                </p>
+              </div>
+              <button
+                onClick={clearError}
+                className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label="Dismiss"
+              >
+                <svg 
+                  className="w-4 h-4" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M6 18L18 6M6 6l12 12" 
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="relative z-10">
         <section
           aria-label="Notifications alt+T"
@@ -76,7 +147,8 @@ const Login: React.FC = () => {
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className="lucide lucide-arrow-up h-4 w-4 transition-all duration-600 group-hover:-translate-y-1 text-violet-400 animate-pulse"
+                    className="lucide lucide-arrow-up h-4 w-4 transition-all duration-600 group-hover:-translate-y-1 text-violet-400"
+                    style={{ animation: 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}
                   >
                     <path d="m5 12 7-7 7 7"></path>
                     <path d="M12 19V5"></path>
@@ -91,7 +163,8 @@ const Login: React.FC = () => {
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className="lucide lucide-arrow-up h-4 w-4 transition-all duration-600 group-hover:-translate-y-2 text-blue-400 animate-pulse delay-75"
+                    className="lucide lucide-arrow-up h-4 w-4 transition-all duration-600 group-hover:-translate-y-2 text-blue-400"
+                    style={{ animation: 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite 0.5s' }}
                   >
                     <path d="m5 12 7-7 7 7"></path>
                     <path d="M12 19V5"></path>
@@ -106,7 +179,8 @@ const Login: React.FC = () => {
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className="lucide lucide-arrow-up h-4 w-4 transition-all duration-600 group-hover:-translate-y-1 text-violet-400 animate-pulse delay-150"
+                    className="lucide lucide-arrow-up h-4 w-4 transition-all duration-600 group-hover:-translate-y-1 text-violet-400"
+                    style={{ animation: 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite 1s' }}
                   >
                     <path d="m5 12 7-7 7 7"></path>
                     <path d="M12 19V5"></path>
@@ -117,46 +191,6 @@ const Login: React.FC = () => {
             <div className="relative group">
               <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-600 to-blue-600 rounded-3xl blur opacity-30 group-hover:opacity-40 transition duration-1000"></div>
               <div className="relative bg-black/80 backdrop-blur-xl rounded-2xl p-8 shadow-2xl border border-gray-800/50 space-y-6">
-                {error && (
-                  <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-sm">
-                    <div className="flex items-start gap-2">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5 mt-0.5 flex-shrink-0"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      <div className="flex-1">
-                        <p className="font-medium">Access Restricted</p>
-                        <p className="text-red-300/80 mt-1">{error}</p>
-                      </div>
-                      <button
-                        onClick={clearError}
-                        className="text-red-400 hover:text-red-300 transition-colors"
-                        aria-label="Dismiss error"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                )}
                 <div className="relative flex items-center gap-2">
                   <SignInButton mode="modal">
                     <button

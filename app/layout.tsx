@@ -20,6 +20,8 @@ export default function RootLayout({
       <body className={inter.className}>
         <ClerkProvider
           publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+          signInFallbackRedirectUrl="/"
+          signUpFallbackRedirectUrl="/"
         >
           <div className="min-h-screen relative overflow-hidden">
             <div className="absolute inset-0 bg-black z-0"></div>

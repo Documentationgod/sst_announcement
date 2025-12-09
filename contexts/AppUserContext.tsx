@@ -96,6 +96,12 @@ export function AppUserProvider({ children }: ProviderProps) {
       const message = profileError instanceof Error ? profileError.message : 'Unable to load profile'
       setUser(null)
       setError(message)
+      // Sign out if it's a domain restriction error
+      if (message.toLowerCase().includes('access denied') || 
+          message.toLowerCase().includes('domain') || 
+          message.toLowerCase().includes('restricted to scaler')) {
+        await persistErrorAndSignOut(message)
+      }
     } finally {
       setIsLoading(false)
     }

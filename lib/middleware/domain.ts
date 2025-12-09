@@ -1,6 +1,7 @@
 import type { AuthenticatedUser } from '../types/index';
 import { ForbiddenError, UnauthorizedError } from '../utils/errors';
 
+// CRITICAL: Only these email domains are allowed
 const ALLOWED_DOMAINS = ['scaler.com', 'sst.scaler.com'];
 
 export function getEmailDomain(email: string): string | null {
@@ -25,10 +26,13 @@ export function requireAllowedDomain(user: AuthenticatedUser | null | undefined)
   }
 
   if (!user.email) {
-    throw new ForbiddenError('Invalid user');
+    throw new ForbiddenError('Invalid user: Email address is required');
   }
 
   if (!isAllowedDomain(user.email)) {
-    throw new ForbiddenError('Domain access restricted');
+    const domain = getEmailDomain(user.email);
+    throw new ForbiddenError(
+      `Access denied. Only Scaler email addresses are allowed (@scaler.com or @sst.scaler.com). Your email domain: @${domain}`
+    );
   }
 }
