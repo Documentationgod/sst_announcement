@@ -23,6 +23,26 @@ const Login: React.FC = () => {
     }
   }, [])
 
+  // Check for error on mount and periodically (in case it was set during redirect)
+  useEffect(() => {
+    const checkError = () => {
+      if (typeof window !== "undefined") {
+        const storedError = localStorage.getItem(AUTH_ERROR_STORAGE_KEY)
+        if (storedError && storedError !== error) {
+          setError(storedError)
+        }
+      }
+    }
+    
+    // Check immediately
+    checkError()
+    
+    // Check every 500ms to catch errors set during redirects
+    const interval = setInterval(checkError, 500)
+    
+    return () => clearInterval(interval)
+  }, [error])
+
   useEffect(() => {
     if (error) {
       const timer = setTimeout(() => clearError(), 10000)
