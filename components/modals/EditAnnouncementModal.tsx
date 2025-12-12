@@ -35,6 +35,9 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
     target_years: null,
   });
   const [deadlines, setDeadlines] = useState<Deadline[]>([]);
+  const scheduledDeadlineMin = formData.scheduled_at
+    ? formatDateForInput(formData.scheduled_at)
+    : '';
 
   useEffect(() => {
     if (announcement) {
@@ -94,7 +97,17 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
 
   const updateDeadline = (index: number, field: 'label' | 'date', value: string) => {
     const updated = [...deadlines];
-    updated[index] = { ...updated[index], [field]: value };
+    let nextValue = value;
+
+    if (field === 'date' && scheduledDeadlineMin && value) {
+      const selected = new Date(value);
+      const scheduled = new Date(scheduledDeadlineMin);
+      if (!isNaN(selected.getTime()) && !isNaN(scheduled.getTime()) && selected < scheduled) {
+        nextValue = scheduledDeadlineMin;
+      }
+    }
+
+    updated[index] = { ...updated[index], [field]: nextValue };
     setDeadlines(updated);
   };
 
@@ -257,6 +270,7 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
                     type="datetime-local"
                     value={deadline.date ? formatDateForInput(deadline.date) : ''}
                     onChange={(e) => updateDeadline(index, 'date', e.target.value)}
+                    min={scheduledDeadlineMin || undefined}
                     className="w-full px-3 py-2 bg-black/70 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 text-sm"
                   />
                 </div>

@@ -98,6 +98,33 @@ export function validateAnnouncement(data: any): ValidationErrorItem[] {
     }
   }
 
+  const scheduledDate =
+    data.scheduled_at && isValidDate(data.scheduled_at)
+      ? new Date(data.scheduled_at)
+      : null;
+
+  if (Array.isArray(data.deadlines)) {
+    data.deadlines.forEach((deadline: any, idx: number) => {
+      if (!deadline || typeof deadline !== 'object' || !deadline.date) return;
+      const dateValue = deadline.date;
+      if (dateValue && !isValidDate(dateValue)) {
+        errors.push({
+          field: 'deadlines',
+          message: `Deadline #${idx + 1} date must be a valid date`,
+        });
+      }
+      if (scheduledDate && dateValue && isValidDate(dateValue)) {
+        const deadlineDate = new Date(dateValue);
+        if (deadlineDate < scheduledDate) {
+          errors.push({
+            field: 'deadlines',
+            message: 'Deadline dates must be on or after the scheduled time',
+          });
+        }
+      }
+    });
+  }
+
   return errors;
 }
 
