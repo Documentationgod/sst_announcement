@@ -230,7 +230,7 @@ sst_announcement/
    
    The database schema is defined in `lib/schema.ts` using Drizzle ORM. You'll need to:
    - Create the database tables manually based on the schema
-   - Ensure all required tables exist: `users`, `announcements`, `announcement_engagements`
+   - Ensure all required tables exist: `users`, `announcements`
    - Add any missing columns if you encounter schema errors (see [Database Schema Updates](#-database-schema-updates) section)
 
 5. **Start the development server**
@@ -291,8 +291,6 @@ sst_announcement/
 - `reminder_time` - Reminder notification time (with timezone)
 - `is_active` - Active status (boolean, default: true)
 - `status` - Enum: `scheduled`, `active`, `urgent`, `expired` (default: `active`, not null)
-- `views_count` - View count (integer, default: 0)
-- `clicks_count` - Click count (integer, default: 0)
 - `send_email` - Whether to send email notification (boolean, default: false, not null)
 - `email_sent` - Whether email was sent (boolean, default: false, not null)
 - `send_tv` - Whether to display on TV screens (boolean, default: false, not null)
@@ -302,13 +300,6 @@ sst_announcement/
 - `emergency_expires_at` - Emergency expiration (with timezone)
 - `visible_after` - Visibility start time (with timezone)
 - `target_years` - Array of target student years (integer array, nullable)
-
-### Announcement Engagements Table (`announcement_engagements`)
-- `id` - Primary key (serial)
-- `announcement_id` - Foreign key to announcements (integer, not null, references announcements.id, onDelete: cascade)
-- `user_id` - Foreign key to users (integer, references users.id, onDelete: set null)
-- `event_type` - Event type enum: `view`, `click`, `dismiss` (text, not null)
-- `created_at` - Event timestamp (with timezone, default now)
 
 ## 🔐 Security Features
 

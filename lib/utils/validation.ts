@@ -64,6 +64,10 @@ export function validateAnnouncement(data: any): ValidationErrorItem[] {
     errors.push({ field: 'emergency_expires_at', message: 'Emergency expiration time must be a valid date' });
   }
 
+  if (data.visible_after && !isValidDate(data.visible_after)) {
+    errors.push({ field: 'visible_after', message: 'Visible after must be a valid date' });
+  }
+
   if (data.is_active !== undefined && typeof data.is_active !== 'boolean') {
     errors.push({ field: 'is_active', message: 'is_active must be a boolean' });
   }

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { applyRateLimit, generalLimiterOptions, adminLimiterOptions } from '@/lib/middleware/rateLimit';
-import { fetchAnnouncementById, mapAnnouncement } from '@/lib/data/announcements';
+import { fetchAnnouncementById } from '@/lib/data/announcements';
 import { requireAuth, requireAdmin } from '@/lib/middleware/auth';
 import { requireAllowedDomain } from '@/lib/middleware/domain';
 import { BadRequestError, NotFoundError } from '@/lib/utils/errors';
 import { parseId } from '@/lib/utils/validation';
 import { getDb } from '@/lib/config/db';
-import { announcements } from '@/lib/schema';
+import { announcements, announcementSettings, announcementTargets } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 
 export async function GET(
@@ -48,80 +48,161 @@ export async function PATCH(
     const { id: idParam } = await params;
     const id = parseId(idParam, 'Announcement ID');
     const body = await request.json();
-    const updateData: Record<string, unknown> = {};
-
-    const allowedFields: Record<string, string> = {
-      title: 'title',
-      description: 'description',
-      category: 'category',
-      expiry_date: 'expiryDate',
-      deadlines: 'deadlines',
-      scheduled_at: 'scheduledAt',
-      reminder_time: 'reminderTime',
-      is_active: 'isActive',
-      status: 'status',
-      priority_until: 'priorityUntil',
-      target_years: 'targetYears',
-    };
-
-    for (const [key, dbField] of Object.entries(allowedFields)) {
-      if (body[key] !== undefined) {
-        if (key === 'target_years') {
-          updateData[dbField] = normalizeTargetYears(body[key]);
-        } else if (key === 'deadlines') {
-          // Handle deadlines - normalize and convert to JSON string
-          let normalizedDeadlines: any = null;
-          if (body[key] && Array.isArray(body[key]) && body[key].length > 0) {
-            normalizedDeadlines = body[key]
-              .map((d: any) => {
-                if (!d || typeof d !== 'object') return null;
-                const label = String(d.label || '').trim();
-                if (!label) return null;
-                
-                let dateStr = d.date;
-                if (dateStr) {
-                  const date = new Date(dateStr);
-                  if (isNaN(date.getTime())) return null;
-                  dateStr = date.toISOString();
-                } else {
-                  return null;
-                }
-                
-                return { label, date: dateStr };
-              })
-              .filter((d: any) => d !== null)
-              .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
-            
-            if (normalizedDeadlines.length === 0) {
-              normalizedDeadlines = null;
-            }
-          }
-          updateData[dbField] = normalizedDeadlines ? JSON.stringify(normalizedDeadlines) : JSON.stringify([]);
-        } else if (key.endsWith('_date') || key.endsWith('_at') || key.endsWith('_time')) {
-          updateData[dbField] = body[key] ? new Date(body[key]) : null;
-        } else {
-          updateData[dbField] = body[key];
-        }
-      }
-    }
-
-    if (Object.keys(updateData).length === 0) {
-      throw new BadRequestError('No fields to update');
-    }
-
-    updateData.updatedAt = new Date();
+    
     const db = getDb();
-    const result = await db
-      .update(announcements)
-      .set(updateData)
-      .where(eq(announcements.id, id))
-      .returning();
 
-    if (result.length === 0) {
+    // Check if announcement exists
+    const existing = await db.select().from(announcements).where(eq(announcements.id, id)).limit(1);
+    if (existing.length === 0) {
       throw new NotFoundError('Announcement', id);
     }
 
-    return NextResponse.json({ success: true, data: mapAnnouncement(result[0]) });
+    // Separate fields by table
+    const announcementUpdates: Record<string, unknown> = {};
+    const settingsUpdates: Record<string, unknown> = {};
+    let targetYears: number[] | null = null;
+    let deadlines: Array<{ label: string; date: string }> | null = null;
+
+    // Core announcement fields
+    if (body.title !== undefined) announcementUpdates.title = body.title;
+    if (body.description !== undefined) announcementUpdates.description = body.description;
+    if (body.category !== undefined) announcementUpdates.category = body.category;
+    if (body.is_active !== undefined) announcementUpdates.isActive = body.is_active;
+    if (body.status !== undefined) announcementUpdates.status = body.status;
+    if (body.priority_level !== undefined) announcementUpdates.priorityLevel = body.priority_level;
+    if (body.is_emergency !== undefined) announcementUpdates.isEmergency = body.is_emergency;
+
+    // Settings fields
+    if (body.expiry_date !== undefined) {
+      settingsUpdates.expiryDate = body.expiry_date ? new Date(body.expiry_date) : null;
+    }
+    if (body.scheduled_at !== undefined) {
+      settingsUpdates.scheduledAt = body.scheduled_at ? new Date(body.scheduled_at) : null;
+    }
+    if (body.reminder_time !== undefined) {
+      settingsUpdates.reminderTime = body.reminder_time ? new Date(body.reminder_time) : null;
+    }
+    if (body.priority_until !== undefined) {
+      settingsUpdates.priorityUntil = body.priority_until ? new Date(body.priority_until) : null;
+    }
+    if (body.emergency_expires_at !== undefined) {
+      settingsUpdates.emergencyExpiresAt = body.emergency_expires_at ? new Date(body.emergency_expires_at) : null;
+    }
+    if (body.send_email !== undefined) settingsUpdates.sendEmail = body.send_email;
+    if (body.email_sent !== undefined) settingsUpdates.emailSent = body.email_sent;
+    if (body.send_tv !== undefined) settingsUpdates.sendTV = body.send_tv;
+    if (body.visible_after !== undefined) {
+      settingsUpdates.visibleAfter = body.visible_after ? new Date(body.visible_after) : null;
+    }
+
+    // Targets and deadlines
+    if (body.target_years !== undefined) {
+      targetYears = normalizeTargetYears(body.target_years);
+    }
+    if (body.deadlines !== undefined) {
+      if (body.deadlines && Array.isArray(body.deadlines) && body.deadlines.length > 0) {
+        const processedDeadlines = body.deadlines
+          .map((d: any) => {
+            if (!d || typeof d !== 'object') return null;
+            const label = String(d.label || '').trim();
+            if (!label) return null;
+            
+            let dateStr = d.date;
+            if (dateStr) {
+              const date = new Date(dateStr);
+              if (isNaN(date.getTime())) return null;
+              dateStr = date.toISOString();
+            } else {
+              return null;
+            }
+            
+            return { label, date: dateStr };
+          })
+          .filter((d: any) => d !== null)
+          .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        
+        deadlines = processedDeadlines.length === 0 ? null : processedDeadlines;
+      } else {
+        deadlines = null;
+      }
+    }
+
+    // Update announcements table
+    if (Object.keys(announcementUpdates).length > 0) {
+      announcementUpdates.updatedAt = new Date();
+      await db
+        .update(announcements)
+        .set(announcementUpdates)
+        .where(eq(announcements.id, id));
+    }
+
+    // Update or insert into announcement_settings
+    if (Object.keys(settingsUpdates).length > 0) {
+      const existingSettings = await db
+        .select()
+        .from(announcementSettings)
+        .where(eq(announcementSettings.announcementId, id))
+        .limit(1);
+      
+      if (existingSettings.length > 0) {
+        await db
+          .update(announcementSettings)
+          .set(settingsUpdates)
+          .where(eq(announcementSettings.announcementId, id));
+      } else {
+        await db.insert(announcementSettings).values({
+          announcementId: id,
+          ...settingsUpdates,
+        } as any);
+      }
+    }
+
+    // Update targets: delete existing and insert new ones
+    if (targetYears !== undefined || deadlines !== undefined) {
+      // Delete existing targets
+      await db
+        .delete(announcementTargets)
+        .where(eq(announcementTargets.announcementId, id));
+
+      // Insert new targets
+      const targetInserts: Array<{ announcementId: number; targetYear?: number | null; deadlineDate?: Date | null; deadlineLabel?: string | null }> = [];
+
+      // Add target years
+      if (targetYears && targetYears.length > 0) {
+        for (const year of targetYears) {
+          targetInserts.push({
+            announcementId: id,
+            targetYear: year,
+            deadlineDate: null,
+            deadlineLabel: null,
+          });
+        }
+      }
+
+      // Add deadlines
+      if (deadlines && deadlines.length > 0) {
+        for (const deadline of deadlines) {
+          targetInserts.push({
+            announcementId: id,
+            targetYear: null,
+            deadlineDate: new Date(deadline.date),
+            deadlineLabel: deadline.label,
+          });
+        }
+      }
+
+      if (targetInserts.length > 0) {
+        await db.insert(announcementTargets).values(targetInserts);
+      }
+    }
+
+    // Fetch updated announcement
+    const updated = await fetchAnnouncementById(id);
+    if (!updated) {
+      throw new NotFoundError('Announcement', id);
+    }
+
+    return NextResponse.json({ success: true, data: updated });
 
   } catch (error: any) {
     return NextResponse.json(
@@ -196,4 +277,3 @@ export async function DELETE(
     );
   }
 }
-

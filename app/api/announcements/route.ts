@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { applyRateLimit, generalLimiterOptions, adminLimiterOptions } from '@/lib/middleware/rateLimit';
-import { fetchAllAnnouncements, mapAnnouncement } from '@/lib/data/announcements';
+import { fetchAllAnnouncements, fetchAnnouncementById } from '@/lib/data/announcements';
 import { requireAuth, requireAdmin, getUserFromRequest } from '@/lib/middleware/auth';
 import { requireAllowedDomain } from '@/lib/middleware/domain';
 import { validateAnnouncement } from '@/lib/utils/validation';
 import { BadRequestError, formatErrorResponse } from '@/lib/utils/errors';
 import { getDb, getPool } from '@/lib/config/db';
-import { announcements, users } from '@/lib/schema';
+import { announcements, announcementSettings, announcementTargets, users } from '@/lib/schema';
 import { sendAnnouncementEmail } from '@/lib/services/email';
 import { eq } from 'drizzle-orm';
 import { normalizeUserRole, hasAdminAccess } from '@/lib/utils/roleUtils';
@@ -68,6 +68,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validationErrors = validateAnnouncement(body);
     if (validationErrors.length > 0) {
+      console.error('[POST] Validation errors:', JSON.stringify(validationErrors, null, 2));
+      console.error('[POST] Request body:', JSON.stringify(body, null, 2));
       throw new BadRequestError('Validation failed', validationErrors);
     }
 
@@ -88,6 +90,7 @@ export async function POST(request: NextRequest) {
       target_years = null,
       is_emergency = false,
       emergency_expires_at = null,
+      visible_after = null,
     } = body;
 
     const db = getDb();
@@ -182,40 +185,81 @@ export async function POST(request: NextRequest) {
       finalExpiryDate = expiry_date ? new Date(expiry_date) : null;
     }
 
-    const announcementValues: any = {
+    // Insert into announcements table (core metadata)
+    const announcementValues = {
       title,
       description,
       category,
       authorId: user.id,
-      expiryDate: finalExpiryDate,
-      scheduledAt: finalScheduledAt,
-      reminderTime: reminder_time ? new Date(reminder_time) : null,
       isActive: finalIsActive,
-      status: finalStatus,
-      sendEmail: send_email,
-      emailSent: false,
-      sendTV: send_tv,
+      status: finalStatus as 'scheduled' | 'active' | 'urgent' | 'expired',
       priorityLevel: finalPriorityLevel,
       isEmergency: isEmergencyAnnouncement,
-      emergencyExpiresAt: emergencyExpiresAtDate,
     };
-    if (prioritySupported) {
-      announcementValues.priorityUntil = priorityUntilDate;
-    }
-    if (targetYearsSupported) {
-      announcementValues.targetYears = normalizedTargetYears;
-    }
+
+    const [announcementRecord] = await db
+      .insert(announcements)
+      .values(announcementValues)
+      .returning();
+
+    const announcementId = announcementRecord.id!;
+
+    // Insert into announcement_settings table (optional settings)
+    const hasSettings = finalExpiryDate || finalScheduledAt || reminder_time || 
+                       priorityUntilDate || emergencyExpiresAtDate || 
+                       send_email || send_tv || visible_after;
     
-    if (normalizedDeadlines) {
-      announcementValues.deadlines = JSON.stringify(normalizedDeadlines);
-    } else {
-      announcementValues.deadlines = JSON.stringify([]);
+    if (hasSettings) {
+      await db.insert(announcementSettings).values({
+        announcementId,
+        expiryDate: finalExpiryDate,
+        scheduledAt: finalScheduledAt,
+        reminderTime: reminder_time ? new Date(reminder_time) : null,
+        priorityUntil: priorityUntilDate,
+        emergencyExpiresAt: emergencyExpiresAtDate,
+        sendEmail: send_email,
+        emailSent: false,
+        sendTV: send_tv,
+        visibleAfter: visible_after ? new Date(visible_after) : null,
+      });
     }
 
-    const record = await insertAnnouncementWithFallback(db, announcementValues, {
-      prioritySupported,
-      targetYearsSupported,
-    });
+    // Insert into announcement_targets table (target years and deadlines)
+    const targetInserts: Array<{ announcementId: number; targetYear?: number | null; deadlineDate?: Date | null; deadlineLabel?: string | null }> = [];
+
+    // Add target years
+    if (normalizedTargetYears && normalizedTargetYears.length > 0) {
+      for (const year of normalizedTargetYears) {
+        targetInserts.push({
+          announcementId,
+          targetYear: year,
+          deadlineDate: null,
+          deadlineLabel: null,
+        });
+      }
+    }
+
+    // Add deadlines
+    if (normalizedDeadlines && normalizedDeadlines.length > 0) {
+      for (const deadline of normalizedDeadlines) {
+        targetInserts.push({
+          announcementId,
+          targetYear: null,
+          deadlineDate: new Date(deadline.date),
+          deadlineLabel: deadline.label,
+        });
+      }
+    }
+
+    if (targetInserts.length > 0) {
+      await db.insert(announcementTargets).values(targetInserts);
+    }
+
+    // Fetch the complete announcement with joins
+    const record = await fetchAnnouncementById(announcementId);
+    if (!record) {
+      throw new Error('Failed to fetch created announcement');
+    }
 
     if (pendingScheduleAdjustments.length > 0) {
       await applyScheduleAdjustments(db, pendingScheduleAdjustments);
@@ -241,10 +285,26 @@ export async function POST(request: NextRequest) {
           emailSent = result.success;
           emailMessage = result.message || result.error || null;
           if (result.success) {
-            await db
-              .update(announcements)
-              .set({ emailSent: true })
-              .where(eq(announcements.id, record.id!));
+            // Update email_sent in announcement_settings
+            const existingSettings = await db
+              .select()
+              .from(announcementSettings)
+              .where(eq(announcementSettings.announcementId, announcementId))
+              .limit(1);
+            
+            if (existingSettings.length > 0) {
+              await db
+                .update(announcementSettings)
+                .set({ emailSent: true })
+                .where(eq(announcementSettings.announcementId, announcementId));
+            } else {
+              await db.insert(announcementSettings).values({
+                announcementId,
+                emailSent: true,
+                sendEmail: send_email,
+                sendTV: send_tv,
+              });
+            }
           }
         } else {
           emailMessage = 'No recipients matched the selected years';
@@ -258,7 +318,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        announcement: mapAnnouncement(record),
+        announcement: record,
         emailSent,
         emailMessage,
         autoRescheduled: autoRescheduled && !isEmergencyAnnouncement
@@ -272,8 +332,13 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('[POST] /api/announcements error:', error);
+    if (error?.details && Array.isArray(error.details)) {
+      console.error('[POST] Validation details:', JSON.stringify(error.details, null, 2));
+    }
     const status = error?.statusCode || error?.status || 500;
-    return NextResponse.json(formatErrorResponse(error), { status });
+    const response = formatErrorResponse(error);
+    console.error('[POST] Error response:', JSON.stringify(response, null, 2));
+    return NextResponse.json(response, { status });
   }
 }
 
@@ -430,12 +495,13 @@ async function fetchConflictsForRange(start: Date, end: Date): Promise<DetailedC
   const pool = getPool();
   const result = await pool.query({
     text: `
-      SELECT a.id, a.title, a.priority_level, a.scheduled_at, u.role AS author_role
+      SELECT a.id, a.title, a.priority_level, s.scheduled_at, u.role AS author_role
       FROM announcements a
+      INNER JOIN announcement_settings s ON a.id = s.announcement_id
       LEFT JOIN users u ON a.author_id = u.id
-      WHERE a.scheduled_at IS NOT NULL
-        AND a.scheduled_at >= $1
-        AND a.scheduled_at < $2
+      WHERE s.scheduled_at IS NOT NULL
+        AND s.scheduled_at >= $1
+        AND s.scheduled_at < $2
         AND a.status IN ('scheduled', 'active')
     `,
     values: [start.toISOString(), end.toISOString()],
@@ -449,10 +515,31 @@ async function applyScheduleAdjustments(
   adjustments: ScheduleAdjustment[]
 ) {
   for (const adjustment of adjustments) {
+    // Update scheduled_at in announcement_settings
+    const existingSettings = await db
+      .select()
+      .from(announcementSettings)
+      .where(eq(announcementSettings.announcementId, adjustment.id))
+      .limit(1);
+    
+    if (existingSettings.length > 0) {
+      await db
+        .update(announcementSettings)
+        .set({
+          scheduledAt: adjustment.newTime,
+        })
+        .where(eq(announcementSettings.announcementId, adjustment.id));
+    } else {
+      await db.insert(announcementSettings).values({
+        announcementId: adjustment.id,
+        scheduledAt: adjustment.newTime,
+      });
+    }
+    
+    // Update updated_at in announcements
     await db
       .update(announcements)
       .set({
-        scheduledAt: adjustment.newTime,
         updatedAt: new Date(),
       })
       .where(eq(announcements.id, adjustment.id));
@@ -460,165 +547,6 @@ async function applyScheduleAdjustments(
 }
 
 
-async function insertAnnouncementWithFallback(
-  db: ReturnType<typeof getDb>,
-  values: typeof announcements.$inferInsert,
-  options: { prioritySupported: boolean; targetYearsSupported: boolean }
-) {
-  const { prioritySupported, targetYearsSupported } = options;
-
-  if (prioritySupported) {
-    try {
-      const [record] = await db.insert(announcements).values(values).returning();
-      return record;
-    } catch (error) {
-      if (isMissingPriorityColumnError(error)) {
-        priorityColumnState = 'unsupported';
-      } else if (isInvalidEnumError(error) && values.status === 'urgent') {
-        console.warn('Urgent status not supported, using active instead');
-        const fallbackValues = { ...values, status: 'active' as const };
-        const [record] = await db.insert(announcements).values(fallbackValues).returning();
-        return record;
-      } else {
-        throw error;
-      }
-    }
-  }
-
-  const pool = getPool();
-  const targetYearsValue =
-    targetYearsSupported && Array.isArray(values.targetYears) && values.targetYears.length > 0
-      ? values.targetYears
-      : null;
-
-  const insertStatus = values.status === 'urgent' ? 'active' : (values.status ?? 'active');
-  const priorityLevel = values.priorityLevel ?? 3;
-  
-  try {
-    const manualInsert = await pool.query({
-      text: buildManualInsertStatement(!!targetYearsValue),
-      values: buildManualInsertValues({
-        values,
-        insertStatus,
-        priorityLevel,
-        targetYearsValue,
-      }),
-    });
-    
-    if (!manualInsert.rows?.length) {
-      throw new Error('Failed to insert announcement without priority column');
-    }
-    
-    return mapRowToAnnouncement(manualInsert.rows[0]);
-  } catch (error) {
-    if (isInvalidEnumError(error) && insertStatus !== 'active') {
-      const manualInsert = await pool.query({
-        text: buildManualInsertStatement(!!targetYearsValue),
-        values: buildManualInsertValues({
-          values,
-          insertStatus: 'active',
-          priorityLevel,
-          targetYearsValue,
-        }),
-      });
-      
-      if (!manualInsert.rows?.length) {
-        throw new Error('Failed to insert announcement');
-      }
-      
-      return mapRowToAnnouncement(manualInsert.rows[0]);
-    }
-    throw error;
-  }
-}
-
-function isMissingPriorityColumnError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  const lowerMessage = message.toLowerCase();
-  return (
-    lowerMessage.includes('priority_until') ||
-    lowerMessage.includes('priority until') ||
-    (lowerMessage.includes('column') && lowerMessage.includes('does not exist'))
-  );
-}
-
-function isInvalidEnumError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  const lowerMessage = message.toLowerCase();
-  return (
-    lowerMessage.includes('invalid input value for enum') ||
-    lowerMessage.includes('invalid enum value')
-  );
-}
-
-function buildManualInsertStatement(includeTargetYears: boolean): string {
-  const columns = [
-    'title',
-    'description',
-    'category',
-    'author_id',
-    'expiry_date',
-    'deadlines',
-    'scheduled_at',
-    'reminder_time',
-    'is_active',
-    'status',
-    'send_email',
-    'email_sent',
-    'send_tv',
-    'priority_level',
-    'is_emergency',
-    'emergency_expires_at',
-  ];
-  if (includeTargetYears) {
-    columns.push('target_years');
-  }
-  const placeholders = columns.map((_, idx) => `$${idx + 1}`).join(', ');
-  return `
-        INSERT INTO announcements (${columns.join(', ')})
-        VALUES (${placeholders})
-        RETURNING *
-      `;
-}
-
-function buildManualInsertValues({
-  values,
-  insertStatus,
-  priorityLevel,
-  targetYearsValue,
-}: {
-  values: typeof announcements.$inferInsert;
-  insertStatus: string;
-  priorityLevel: number;
-  targetYearsValue: number[] | null;
-}) {
-  const deadlinesValue = values.deadlines 
-    ? (typeof values.deadlines === 'string' ? values.deadlines : JSON.stringify(values.deadlines))
-    : JSON.stringify([]);
-
-  const params: any[] = [
-    values.title,
-    values.description,
-    values.category,
-    values.authorId,
-    values.expiryDate ?? null,
-    deadlinesValue,
-    values.scheduledAt ?? null,
-    values.reminderTime ?? null,
-    values.isActive ?? true,
-    insertStatus,
-    values.sendEmail ?? false,
-    values.emailSent ?? false,
-    values.sendTV ?? false,
-    priorityLevel,
-    values.isEmergency ?? false,
-    values.emergencyExpiresAt ?? null,
-  ];
-  if (targetYearsValue) {
-    params.push(targetYearsValue);
-  }
-  return params;
-}
 
 async function resolveRecipientEmails(targetYears: number[] | null): Promise<string[]> {
   const db = getDb();
@@ -640,46 +568,3 @@ async function resolveRecipientEmails(targetYears: number[] | null): Promise<str
     });
 }
 
-function mapRowToAnnouncement(row: any): typeof announcements.$inferSelect {
-  const targetYears =
-    Array.isArray(row.target_years) && row.target_years.length > 0 ? row.target_years : null;
-  
-  let deadlines: any = null;
-  if (row.deadlines) {
-    try {
-      const parsed = typeof row.deadlines === 'string' ? JSON.parse(row.deadlines) : row.deadlines;
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        deadlines = parsed;
-      }
-    } catch (e) {
-      console.warn('Failed to parse deadlines JSON:', e);
-      deadlines = null;
-    }
-  }
-
-  return {
-    id: row.id,
-    title: row.title,
-    description: row.description,
-    category: row.category,
-    authorId: row.author_id,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    expiryDate: row.expiry_date,
-    deadlines,
-    scheduledAt: row.scheduled_at,
-    reminderTime: row.reminder_time,
-    isActive: row.is_active,
-    status: row.status,
-    viewsCount: row.views_count ?? 0,
-    clicksCount: row.clicks_count ?? 0,
-    sendEmail: row.send_email ?? false,
-    emailSent: row.email_sent ?? false,
-    sendTV: row.send_tv ?? false,
-    priorityUntil: null,
-    priorityLevel: row.priority_level ?? 3,
-    isEmergency: row.is_emergency ?? false,
-    emergencyExpiresAt: row.emergency_expires_at ?? null,
-    targetYears,
-  } as typeof announcements.$inferSelect;
-}

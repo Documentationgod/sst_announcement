@@ -16,7 +16,7 @@ import { INTAKE_YEAR_OPTIONS } from '../../utils/studentYear';
 const DEFAULT_FORM_STATE: CreateAnnouncementData = {
   title: '',
   description: '',
-  category: 'college',
+  category: 'general',
   expiry_date: '',
   deadlines: null,
   scheduled_at: '',
@@ -94,7 +94,7 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
       
       setMinScheduledDate(dayAfterTomorrowFormatted);
       
-      const initialCategory = initialData?.category || 'college';
+      const initialCategory = initialData?.category || 'general';
       const autoPriority = getPriorityForCategory(initialCategory);
       const autoPriorityNum = priorityToNumber(autoPriority);
       

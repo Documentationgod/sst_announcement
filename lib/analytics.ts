@@ -124,7 +124,7 @@ export const clientAnalytics = {
   },
 
   // Track outbound link clicks
-  trackOutboundClick: async (url: string, referrer?: string) => {
+  trackOutboundClick: (url: string, referrer?: string) => {
     if (typeof window !== 'undefined') {
       try {
         // Track in Google Analytics
@@ -133,18 +133,6 @@ export const clientAnalytics = {
           domain: new URL(url).hostname,
           referrer: referrer || window.location.href,
           timestamp: new Date().toISOString()
-        })
-
-        // Track in our database
-        await fetch('/api/analytics/outbound-click', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            url,
-            referrer: referrer || window.location.href,
-          }),
         })
       } catch (error) {
         console.error('Error tracking outbound click:', error)

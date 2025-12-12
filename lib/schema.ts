@@ -1,8 +1,7 @@
-import { pgTable, serial, text, varchar, boolean, integer, timestamp, pgEnum, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, varchar, boolean, integer, timestamp, pgEnum } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const userRoleEnum = pgEnum('user_role', ['student', 'student_admin', 'admin', 'super_admin', 'user']);
-export const eventTypeEnum = pgEnum('event_type', ['view', 'click', 'dismiss']);
 
 // Enum for announcement status
 export const announcementStatusEnum = pgEnum('announcement_status', [
@@ -31,54 +30,48 @@ export const users = pgTable('users', {
   lastLogin: timestamp('last_login', { withTimezone: true }),
 });
 
+// 1. Announcements table (core metadata)
 export const announcements = pgTable('announcements', {
   id: serial('id').primaryKey(),
   title: varchar('title', { length: 255 }).notNull(),
   description: text('description').notNull(),
   category: announcementCategoryEnum('category').notNull(),
   authorId: integer('author_id').references(() => users.id, { onDelete: 'set null' }),
+  status: announcementStatusEnum('status').default('active').notNull(),
+  isActive: boolean('is_active').default(true),
+  priorityLevel: integer('priority_level').default(3).notNull(),
+  isEmergency: boolean('is_emergency').default(false).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }),
+});
+
+// 2. Announcement settings table (optional scheduling + delivery settings)
+export const announcementSettings = pgTable('announcement_settings', {
+  announcementId: integer('announcement_id').primaryKey().references(() => announcements.id, { onDelete: 'cascade' }),
   expiryDate: timestamp('expiry_date', { withTimezone: true }),
-  deadlines: jsonb('deadlines').default([]), 
   scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
   reminderTime: timestamp('reminder_time', { withTimezone: true }),
-  isActive: boolean('is_active').default(true),
-  status: announcementStatusEnum('status').default('active').notNull(),
-  viewsCount: integer('views_count').default(0),
-  clicksCount: integer('clicks_count').default(0),
+  priorityUntil: timestamp('priority_until', { withTimezone: true }),
+  emergencyExpiresAt: timestamp('emergency_expires_at', { withTimezone: true }),
   sendEmail: boolean('send_email').default(false).notNull(),
   emailSent: boolean('email_sent').default(false).notNull(),
+  reminderSent: boolean('reminder_sent').default(false).notNull(),
   sendTV: boolean('send_tv').default(false).notNull(),
-  priorityUntil: timestamp('priority_until', { withTimezone: true }),
-  isEmergency: boolean('is_emergency').default(false).notNull(),
-  emergencyExpiresAt: timestamp('emergency_expires_at', { withTimezone: true }),
   visibleAfter: timestamp('visible_after', { withTimezone: true }),
-  priorityLevel: integer('priority_level').default(3).notNull(), 
-  targetYears: integer('target_years').array(),
 });
 
-export const announcementEngagements = pgTable('announcement_engagements', {
+// 3. Announcement targets table (target years + deadlines)
+export const announcementTargets = pgTable('announcement_targets', {
   id: serial('id').primaryKey(),
   announcementId: integer('announcement_id').notNull().references(() => announcements.id, { onDelete: 'cascade' }),
-  userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
-  eventType: text('event_type').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  targetYear: integer('target_year'),
+  deadlineDate: timestamp('deadline_date', { withTimezone: true }),
+  deadlineLabel: text('deadline_label'),
 });
 
-export const outboundClickTracking = pgTable('outbound_click_tracking', {
-  id: serial('id').primaryKey(),
-  userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
-  url: text('url').notNull(),
-  domain: varchar('domain', { length: 255 }).notNull(),
-  referrer: text('referrer'),
-  userAgent: text('user_agent'),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-});
-
+// Relations
 export const usersRelations = relations(users, ({ many }) => ({
   announcements: many(announcements),
-  engagements: many(announcementEngagements),
 }));
 
 export const announcementsRelations = relations(announcements, ({ one, many }) => ({
@@ -86,25 +79,33 @@ export const announcementsRelations = relations(announcements, ({ one, many }) =
     fields: [announcements.authorId],
     references: [users.id],
   }),
-  engagements: many(announcementEngagements),
+  settings: one(announcementSettings, {
+    fields: [announcements.id],
+    references: [announcementSettings.announcementId],
+  }),
+  targets: many(announcementTargets),
 }));
 
-export const announcementEngagementsRelations = relations(announcementEngagements, ({ one }) => ({
+export const announcementSettingsRelations = relations(announcementSettings, ({ one }) => ({
   announcement: one(announcements, {
-    fields: [announcementEngagements.announcementId],
+    fields: [announcementSettings.announcementId],
     references: [announcements.id],
   }),
-  user: one(users, {
-    fields: [announcementEngagements.userId],
-    references: [users.id],
+}));
+
+export const announcementTargetsRelations = relations(announcementTargets, ({ one }) => ({
+  announcement: one(announcements, {
+    fields: [announcementTargets.announcementId],
+    references: [announcements.id],
   }),
 }));
 
+// Type exports
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Announcement = typeof announcements.$inferSelect;
 export type NewAnnouncement = typeof announcements.$inferInsert;
-export type AnnouncementEngagement = typeof announcementEngagements.$inferSelect;
-export type NewAnnouncementEngagement = typeof announcementEngagements.$inferInsert;
-export type OutboundClickTracking = typeof outboundClickTracking.$inferSelect;
-export type NewOutboundClickTracking = typeof outboundClickTracking.$inferInsert;
+export type AnnouncementSettings = typeof announcementSettings.$inferSelect;
+export type NewAnnouncementSettings = typeof announcementSettings.$inferInsert;
+export type AnnouncementTarget = typeof announcementTargets.$inferSelect;
+export type NewAnnouncementTarget = typeof announcementTargets.$inferInsert;

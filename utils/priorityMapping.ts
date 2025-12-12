@@ -7,11 +7,9 @@ export interface CategoryPriorityMap {
 
 export const CATEGORY_PRIORITY_MAP: CategoryPriorityMap = {
   'academic': 'P1',
-  'tech_events': 'P2',
-  'tech-workshops': 'P2',
-  'cultural': 'P2',
-  'college': 'P3',
-  'sports': 'P3',
+  'sil': 'P2',
+  'club': 'P2',
+  'general': 'P3',
 };
 
 
@@ -72,7 +70,7 @@ export const getPriorityExamples = (priority: PriorityLevel): string[] => {
     'P0': ['Emergency Announcement 🚨 (handled via emergency flag)'],
     'P1': ['Academic Announcements', 'Results', 'Re-exam'],
     'P2': ['Tech Events', 'Tech Workshops', 'Cultural Events'],
-    'P3': ['College Announcements', 'Sports', 'General announcements'],
+    'P3': ['General announcements'],
   };
   return examples[priority];
 };

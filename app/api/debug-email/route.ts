@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     const result = await sendAnnouncementEmail({
       title: 'Debug Test Email',
       description: 'This is a debug test email to verify email functionality is working with the hardcoded recipient.',
-      category: 'college',
+      category: 'general',
       recipientEmails: ['mohammed.24bcs10278@sst.scaler.com'],
       expiryDate: null,
       scheduledAt: null,

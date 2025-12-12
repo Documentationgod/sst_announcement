@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     const result = await sendAnnouncementEmail({
       title: 'Test Email - SST Announcement System',
       description: 'This is a test email to verify that your Resend configuration is working properly. If you receive this email, everything is set up correctly!',
-      category: 'college',
+      category: 'general',
       recipientEmails: ['mohammed.24bcs10278@sst.scaler.com'],
       expiryDate: null,
       scheduledAt: null,

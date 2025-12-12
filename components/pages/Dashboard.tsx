@@ -88,7 +88,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
   const filteredByRole = filterAnnouncementsByRole(visibleAnnouncements, derivedRole);
   const prioritizedAnnouncements = sortAnnouncementsByPriority(filteredByRole, derivedRole);
   const totalVisibleCount = useCountUp(visibleAnnouncements.length);
-  const collegeCount = useCountUp(visibleAnnouncements.filter(a => a.category.toLowerCase() === 'college').length);
+  const clubCount = useCountUp(visibleAnnouncements.filter(a => a.category.toLowerCase() === 'club').length);
   const techCount = useCountUp(visibleAnnouncements.filter(a => a.category.toLowerCase() === 'tech' || a.category.toLowerCase() === 'tech-workshops' || a.category.toLowerCase() === 'tech-events').length);
 
   const filteredAnnouncements = searchAnnouncements(
@@ -541,9 +541,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                   <div className="flex items-center justify-between">
                     <div className="space-y-2">
                       <div className="text-4xl font-black bg-gradient-to-r from-violet-300 to-fuchsia-300 bg-clip-text text-transparent">
-                        {collegeCount}
+                        {clubCount}
                       </div>
-                      <p className="text-gray-400 font-semibold text-sm uppercase tracking-wider">College Events</p>
+                      <p className="text-gray-400 font-semibold text-sm uppercase tracking-wider">Club Events</p>
                     </div>
                   </div>
                 </CardContent>

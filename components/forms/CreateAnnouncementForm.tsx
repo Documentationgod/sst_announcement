@@ -18,7 +18,7 @@ const CreateAnnouncementForm: React.FC<CreateAnnouncementFormProps> = ({ onClose
   const [formData, setFormData] = useState<CreateAnnouncementData>({
     title: '',
     description: '',
-    category: 'college',
+    category: 'general',
     expiry_date: '',
     is_active: true,
     status: 'active',
@@ -28,13 +28,10 @@ const CreateAnnouncementForm: React.FC<CreateAnnouncementFormProps> = ({ onClose
   })
 
   const categories = [
-    { value: 'college', label: 'College' },
-    { value: 'tech-events', label: 'Tech Events' },
-    { value: 'tech-workshops', label: 'Tech Workshops' },
     { value: 'academic', label: 'Academic' },
-    { value: 'sports', label: 'Sports' },
-    { value: 'cultural', label: 'Cultural' },
-    { value: 'emergency', label: 'Emergency' }
+    { value: 'sil', label: 'SIL' },
+    { value: 'club', label: 'Club' },
+    { value: 'general', label: 'General' }
   ]
 
   const handleInputChange = (field: keyof CreateAnnouncementData, value: any) => {

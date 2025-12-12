@@ -18,8 +18,6 @@ export interface Announcement {
   reminder_time?: string
   is_active?: boolean
   status?: 'scheduled' | 'active' | 'urgent' | 'expired'
-  views_count?: number
-  clicks_count?: number
   send_email?: boolean
   email_sent?: boolean
   send_tv?: boolean

@@ -27,13 +27,11 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
   const [formData, setFormData] = useState<UpdateAnnouncementData>({
     title: '',
     description: '',
-    category: 'college',
+    category: 'general',
     expiry_date: '',
     deadlines: null,
     scheduled_at: '',
     reminder_time: '',
-    is_active: true,
-    status: 'active',
     target_years: null,
   });
   const [deadlines, setDeadlines] = useState<Deadline[]>([]);
@@ -48,8 +46,6 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
         deadlines: announcement.deadlines ?? null,
         scheduled_at: formatDateForInput(announcement.scheduled_at),
         reminder_time: formatDateForInput(announcement.reminder_time),
-        is_active: announcement.is_active ?? true,
-        status: announcement.status || 'active',
         target_years: announcement.target_years ?? null,
       });
       setDeadlines(announcement.deadlines || []);
@@ -312,36 +308,6 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
                 className="w-full px-4 py-2 bg-black border border-gray-900 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-          </div>
-          <div className="flex items-center gap-4 flex-wrap">
-            <label className="flex items-center gap-2 text-sm text-gray-300">
-              <input
-                type="checkbox"
-                checked={formData.is_active ?? true}
-                onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                className="rounded"
-              />
-              Active
-            </label>
-            {isSuperAdmin ? (
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Status</label>
-                <select
-                  value={formData.status || 'active'}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  className="px-4 py-2 bg-black border border-gray-900 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="active">Active</option>
-                  <option value="scheduled">Scheduled</option>
-                  <option value="urgent">Urgent</option>
-                  <option value="expired">Expired</option>
-                </select>
-              </div>
-            ) : (
-              <div className="flex-1 min-w-[200px] px-4 py-3 bg-blue-500/10 border border-blue-500/30 rounded-xl text-xs text-blue-200">
-                Updates will be sent back to the superadmin review queue. Once approved, scheduling and activation will be handled by the superadmin.
-              </div>
-            )}
           </div>
           <div className="flex gap-3 pt-4">
             <Button
