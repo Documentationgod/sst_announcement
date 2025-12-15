@@ -41,6 +41,8 @@ export const announcements = pgTable('announcements', {
   isActive: boolean('is_active').default(true),
   priorityLevel: integer('priority_level').default(3).notNull(),
   isEmergency: boolean('is_emergency').default(false).notNull(),
+  // Optional URL used for TV display / QR code
+  tvUrl: varchar('tv_url', { length: 512 }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }),
 });
@@ -69,6 +71,17 @@ export const announcementTargets = pgTable('announcement_targets', {
   deadlineLabel: text('deadline_label'),
 });
 
+// 4. Announcement files table (multiple PDFs / resources per announcement)
+export const announcementFiles = pgTable('announcement_files', {
+  id: serial('id').primaryKey(),
+  announcementId: integer('announcement_id').notNull().references(() => announcements.id, { onDelete: 'cascade' }),
+  url: text('url').notNull(),          // Cloudinary secure URL
+  publicId: text('public_id'),         // Cloudinary public_id (optional)
+  fileName: text('file_name'),         // Original file name
+  mimeType: text('mime_type').default('application/pdf'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   announcements: many(announcements),
@@ -84,6 +97,7 @@ export const announcementsRelations = relations(announcements, ({ one, many }) =
     references: [announcementSettings.announcementId],
   }),
   targets: many(announcementTargets),
+  files: many(announcementFiles),
 }));
 
 export const announcementSettingsRelations = relations(announcementSettings, ({ one }) => ({
@@ -100,6 +114,13 @@ export const announcementTargetsRelations = relations(announcementTargets, ({ on
   }),
 }));
 
+export const announcementFilesRelations = relations(announcementFiles, ({ one }) => ({
+  announcement: one(announcements, {
+    fields: [announcementFiles.announcementId],
+    references: [announcements.id],
+  }),
+}));
+
 // Type exports
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -109,3 +130,5 @@ export type AnnouncementSettings = typeof announcementSettings.$inferSelect;
 export type NewAnnouncementSettings = typeof announcementSettings.$inferInsert;
 export type AnnouncementTarget = typeof announcementTargets.$inferSelect;
 export type NewAnnouncementTarget = typeof announcementTargets.$inferInsert;
+export type AnnouncementFile = typeof announcementFiles.$inferSelect;
+export type NewAnnouncementFile = typeof announcementFiles.$inferInsert;
