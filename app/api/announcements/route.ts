@@ -10,7 +10,6 @@ import { announcements, announcementSettings, announcementTargets, users } from 
 import { sendAnnouncementEmail } from '@/lib/services/email';
 import { eq } from 'drizzle-orm';
 import { normalizeUserRole, hasAdminAccess } from '@/lib/utils/roleUtils';
-import { getAnnouncementPriority } from '@/utils/announcementUtils';
 import type { UserRole } from '@/utils/announcementUtils';
 import { getYearMetadataFromEmail, extractIntakeCodeFromEmail } from '@/utils/studentYear';
 
@@ -438,20 +437,17 @@ async function reflowSchedulesForSuperAdmin(
     };
   }
 
-  const rolePriority = getAnnouncementPriority(userRole);
   const records = [
     ...conflicts.map(conflict => ({
       id: conflict.id,
       priorityLevel: conflict.priority_level ?? 3,
-      rolePriority: getAnnouncementPriority(
-        normalizeUserRole(conflict.author_role ?? undefined, undefined)
-      ),
+      rolePriority: 0,
       scheduledAt: conflict.scheduled_at ? new Date(conflict.scheduled_at) : null,
     })),
     {
       id: null,
       priorityLevel: newAnnouncementPriority,
-      rolePriority,
+      rolePriority: 0,
       scheduledAt: normalizedDesired,
     },
   ];
@@ -460,7 +456,7 @@ async function reflowSchedulesForSuperAdmin(
     if (a.priorityLevel !== b.priorityLevel) {
       return a.priorityLevel - b.priorityLevel;
     }
-    return b.rolePriority - a.rolePriority;
+    return 0;
   });
 
   const adjustments: ScheduleAdjustment[] = [];

@@ -9,7 +9,7 @@ import type { CreateAnnouncementData, Deadline } from '../../types';
 import { CATEGORY_OPTIONS } from '../../constants/categories';
 import { useAppUser } from '../../contexts/AppUserContext';
 import { getPriorityForCategory, priorityToNumber, numberToPriority, getPriorityDisplayName, getPriorityExamples } from '../../utils/priorityMapping';
-import { getMaxPriorityForRole, getMaxPriorityNumberForRole, canSetPriorityLevel, normalizeUserRole, hasAdminAccess } from '../../utils/announcementUtils';
+import { normalizeUserRole, hasAdminAccess } from '../../utils/announcementUtils';
 import { formatDateTime, formatDateForInput } from '../../utils/dateUtils';
 import { INTAKE_YEAR_OPTIONS } from '../../utils/studentYear';
 
@@ -63,9 +63,6 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
   const normalizedRole = normalizeUserRole(user?.role, user?.is_admin);
   const isSuperAdmin = normalizedRole === 'super_admin';
   const hasAdmin = hasAdminAccess(normalizedRole);
-  const userRole = normalizedRole;
-  const maxPriority = getMaxPriorityForRole(userRole);
-  const maxPriorityNum = getMaxPriorityNumberForRole(userRole);
   
   const [formData, setFormData] = useState<CreateAnnouncementData>(DEFAULT_FORM_STATE);
   const [priorityDurationHours, setPriorityDurationHours] = useState<number>(2);
@@ -119,13 +116,9 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
     if (formData.category && !isEmergencyVariant) {
       const autoPriority = getPriorityForCategory(formData.category);
       const autoPriorityNum = priorityToNumber(autoPriority);
-      if (canSetPriorityLevel(userRole, autoPriorityNum)) {
-        setFormData(prev => ({ ...prev, priority_level: autoPriorityNum }));
-      } else {
-        setFormData(prev => ({ ...prev, priority_level: maxPriorityNum }));
-      }
+      setFormData(prev => ({ ...prev, priority_level: autoPriorityNum }));
     }
-  }, [formData.category, userRole, maxPriorityNum, isEmergencyVariant]);
+  }, [formData.category, isEmergencyVariant]);
 
   useEffect(() => {
     if (isOpen && isEmergencyVariant && formData.scheduled_at) {
@@ -169,10 +162,6 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
       }
     } else {
       submission.priority_until = submission.priority_until || null;
-      const requestedPriority = submission.priority_level ?? 3;
-      if (!canSetPriorityLevel(userRole, requestedPriority)) {
-        submission.priority_level = maxPriorityNum; 
-      }
     }
 
     submission = {

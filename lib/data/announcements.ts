@@ -258,7 +258,7 @@ export async function getTvData() {
     LEFT JOIN announcement_targets t ON a.id = t.announcement_id
     WHERE s.send_tv = true
     ORDER BY a.created_at DESC
-    LIMIT 10
+    LIMIT 5
     `
   );
   

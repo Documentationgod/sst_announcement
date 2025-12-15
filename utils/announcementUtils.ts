@@ -74,7 +74,9 @@ export const isVisibleToUser = (
 ): boolean => {
   const hasAdminLevel = hasAdminAccess(userRole)
   const now = new Date()
-  const isEmergency = announcement.is_emergency || false
+  const isEmergency =
+    announcement.is_emergency ||
+    (announcement.status === 'urgent' && (announcement.priority_level ?? 3) === 0)
   
   if (isEmergency) {
     if (announcement.emergency_expires_at) {
@@ -82,6 +84,11 @@ export const isVisibleToUser = (
       if (!isNaN(emergencyExpiry.getTime()) && emergencyExpiry < now) {
         return false 
       }
+    }
+
+    // Also hide emergency-style announcements if they are expired by expiry_date
+    if (isAnnouncementExpired(announcement)) {
+      return false
     }
     
     if (!hasAdminLevel && !isSuperAdmin) {
@@ -196,67 +203,34 @@ export const sortAnnouncementsByPriority = (announcements: Announcement[], userR
       return bDate.getTime() - aDate.getTime()
     }
 
-    if (userRole === 'student') {
-      const aApproaching = getNearestApproachingDate(a, now);
-      const bApproaching = getNearestApproachingDate(b, now);
-      
-      if (aApproaching.date && !bApproaching.date) return -1; 
-      if (!aApproaching.date && bApproaching.date) return 1; 
-      
-      if (aApproaching.date && bApproaching.date) {
-        return aApproaching.date.getTime() - bApproaching.date.getTime();
-      }
+    // 1) Date-based urgency for everyone (nearest expiry/deadline first)
+    const aApproaching = getNearestApproachingDate(a, now);
+    const bApproaching = getNearestApproachingDate(b, now);
+
+    if (aApproaching.date && !bApproaching.date) return -1;
+    if (!aApproaching.date && bApproaching.date) return 1;
+
+    if (aApproaching.date && bApproaching.date) {
+      const diff = aApproaching.date.getTime() - bApproaching.date.getTime();
+      if (diff !== 0) return diff;
     }
-    
-    const aPriorityNum = a.priority_level ?? 3
-    const bPriorityNum = b.priority_level ?? 3
-    
-    const aDate = new Date(a.created_at || 0)
-    const bDate = new Date(b.created_at || 0)
-    const timeDiff = Math.abs(aDate.getTime() - bDate.getTime())
-    
-    const SAME_TIME_THRESHOLD = 1000 
-    if (timeDiff <= SAME_TIME_THRESHOLD) {
-      if (aPriorityNum !== bPriorityNum) {
-        return aPriorityNum - bPriorityNum 
-      }
-      return (b.id ?? 0) - (a.id ?? 0)
-    }
-    
+
+    // 2) Fall back to numeric priority (lower number = higher priority)
+    const aPriorityNum = a.priority_level ?? 3;
+    const bPriorityNum = b.priority_level ?? 3;
     if (aPriorityNum !== bPriorityNum) {
-      return aPriorityNum - bPriorityNum 
+      return aPriorityNum - bPriorityNum;
     }
-    
-    const aPriorityUntil = a.priority_until ? new Date(a.priority_until) : null
-    const bPriorityUntil = b.priority_until ? new Date(b.priority_until) : null
-    
-    const aHasPriority = aPriorityUntil && aPriorityUntil > now && a.status === 'urgent'
-    const bHasPriority = bPriorityUntil && bPriorityUntil > now && b.status === 'urgent'
-    
-    if (aHasPriority && !bHasPriority) return -1
-    if (!aHasPriority && bHasPriority) return 1
-    
-    return bDate.getTime() - aDate.getTime()
+
+    // 3) Final fallback: newest first
+    const aDate = new Date(a.created_at || 0);
+    const bDate = new Date(b.created_at || 0);
+    return bDate.getTime() - aDate.getTime();
   })
 }
 
 export const filterAnnouncementsByRole = (announcements: Announcement[], userRole: UserRole): Announcement[] => {
-  return announcements.filter(announcement => {
-    if (userRole === 'super_admin') return true
-    
-    if (userRole === 'admin') {
-      return true
-    }
-    
-    if (userRole === 'student_admin') {
-      return true
-    }
-    
-    const hasDeadlines = announcement.deadlines && Array.isArray(announcement.deadlines) && announcement.deadlines.length > 0;
-    const isActive = announcement.status === 'active' && announcement.is_active !== false;
-    
-    return isActive || hasDeadlines;
-  })
+  return announcements
 }
 
 export const getUniqueCategories = (announcements: Announcement[], userRole: UserRole): string[] => {

@@ -96,9 +96,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
     searchQuery
   );
 
-  // Custom sorting for Recent Announcements: prioritize expired and deadline announcements
+  // Custom sorting for Recent Announcements: prioritize emergency, then expired, then deadline announcements
   const sortedForRecentAnnouncements = [...filteredAnnouncements].sort((a, b) => {
     const now = new Date();
+
+    // Highest priority: Emergency announcements always on top
+    const aIsEmergency = a.is_emergency || false;
+    const bIsEmergency = b.is_emergency || false;
+    if (aIsEmergency && !bIsEmergency) return -1;
+    if (!aIsEmergency && bIsEmergency) return 1;
     
     // Check if expired
     const aIsExpired = isAnnouncementExpired(a) || a.status === 'expired';
@@ -108,15 +114,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
     const aHasDeadlines = a.deadlines && Array.isArray(a.deadlines) && a.deadlines.length > 0;
     const bHasDeadlines = b.deadlines && Array.isArray(b.deadlines) && b.deadlines.length > 0;
     
-    // Priority order:
-    // 1. Expired announcements
-    // 2. Announcements with deadlines (expired or upcoming)
-    // 3. Normal sorting
     
     if (aIsExpired && !bIsExpired) return -1;
     if (!aIsExpired && bIsExpired) return 1;
     
-    // Both expired - sort by expiry date (most recently expired first)
     if (aIsExpired && bIsExpired) {
       const aExpiry = a.expiry_date ? new Date(a.expiry_date) : null;
       const bExpiry = b.expiry_date ? new Date(b.expiry_date) : null;
@@ -127,7 +128,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
       if (bExpiry) return 1;
     }
     
-    // Prioritize announcements with deadlines
     if (aHasDeadlines && !bHasDeadlines) return -1;
     if (!aHasDeadlines && bHasDeadlines) return 1;
     

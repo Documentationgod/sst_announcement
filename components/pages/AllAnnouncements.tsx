@@ -12,8 +12,7 @@ import { isAnnouncementExpired, formatDateTime } from '@/utils/dateUtils'
 import { getCategoryColor, getCategoryIcon } from '@/constants/categoryStyles'
 import { useToast } from '@/hooks/useToast'
 import { ToastContainer } from '../ui/toast'
-import { isVisibleToUser, normalizeUserRole, hasAdminAccess, type UserRole } from '@/utils/announcementUtils'
-import { extractIntakeCodeFromEmail } from '@/utils/studentYear'
+import { normalizeUserRole, type UserRole } from '@/utils/announcementUtils'
 import { parseLinks } from '@/utils/linkParser'
 
 interface AllAnnouncementsProps {
@@ -26,7 +25,6 @@ const AllAnnouncements: React.FC<AllAnnouncementsProps> = ({ onBackToDashboard }
   const [loading, setLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
-  const [announcementsToShow, setAnnouncementsToShow] = useState<number>(6)
   const { toasts, showToast, removeToast } = useToast()
 
   useEffect(() => {
@@ -52,23 +50,11 @@ const AllAnnouncements: React.FC<AllAnnouncementsProps> = ({ onBackToDashboard }
 
   const categories = ['all', 'general', 'academic', 'sil', 'clubs']
 
-  // Determine user role and intake code for filtering
+  // Determine user role (kept for future extensions if needed)
   const derivedRole: UserRole = normalizeUserRole(user?.role, user?.is_admin)
-  const isSuperAdmin = derivedRole === 'super_admin'
-  const userIntakeCode = user?.email ? extractIntakeCodeFromEmail(user.email) : null
 
-  // Filter announcements by visibility (intake year targeting) and category
+  // Filter announcements only by category and search
   const filteredAnnouncements = announcements
-    .filter(announcement => 
-      isVisibleToUser(
-        announcement,
-        derivedRole,
-        user?.is_admin || false,
-        user?.id,
-        isSuperAdmin,
-        userIntakeCode
-      )
-    )
     .filter(announcement => {
       if (selectedCategory === 'all') return true
       return announcement.category === selectedCategory
@@ -82,14 +68,8 @@ const AllAnnouncements: React.FC<AllAnnouncementsProps> = ({ onBackToDashboard }
       )
     })
 
-  // Reset announcements count when category filter changes
-  useEffect(() => {
-    setAnnouncementsToShow(6)
-  }, [selectedCategory])
-
-  // Get the announcements to display (first N announcements)
-  const displayedAnnouncements = filteredAnnouncements.slice(0, announcementsToShow)
-  const hasMoreAnnouncements = filteredAnnouncements.length > announcementsToShow
+  // Show all filtered announcements (no pagination on this page)
+  const displayedAnnouncements = filteredAnnouncements
 
   return (
     <div className="min-h-screen bg-gray-950">  
@@ -286,17 +266,6 @@ const AllAnnouncements: React.FC<AllAnnouncementsProps> = ({ onBackToDashboard }
                 )
               })}
             </div>
-
-            {hasMoreAnnouncements && filteredAnnouncements.length > 0 && (
-              <div className="flex justify-center pt-6">
-                <Button
-                  onClick={() => setAnnouncementsToShow(prev => prev + 6)}
-                  className="bg-gray-700 hover:bg-gray-600 text-white font-semibold px-8 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
-                >
-                  Load More ({filteredAnnouncements.length - announcementsToShow} remaining)
-                </Button>
-              </div>
-            )}
 
             {filteredAnnouncements.length === 0 && !loading && (
               <div className="text-center py-16 bg-gray-900/30 rounded-2xl border border-gray-800/50">
