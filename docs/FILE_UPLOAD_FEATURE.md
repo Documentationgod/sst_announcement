@@ -1,11 +1,13 @@
 # File Upload Feature - ImageKit Integration
 
 ## Overview
+
 This feature adds support for attaching images and documents to announcements using ImageKit as the CDN provider.
 
 ## Database Schema
 
 ### Table: `announcement_files`
+
 Stores metadata for all files attached to announcements.
 
 ```sql
@@ -20,15 +22,16 @@ CREATE TABLE announcement_files (
   display_order INTEGER DEFAULT 0,
   uploaded_by VARCHAR(255) NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  
-  CONSTRAINT fk_announcement 
-    FOREIGN KEY (announcement_id) 
-    REFERENCES announcements(id) 
+
+  CONSTRAINT fk_announcement
+    FOREIGN KEY (announcement_id)
+    REFERENCES announcements(id)
     ON DELETE CASCADE
 );
 ```
 
 **To apply the schema:**
+
 ```bash
 # Connect to your Supabase database and run:
 psql $DATABASE_URL < scripts/create-announcement-files-table.sql
@@ -46,6 +49,7 @@ IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/your_id
 ```
 
 **How to get ImageKit credentials:**
+
 1. Sign up at https://imagekit.io
 2. Go to Developer Options → API Keys
 3. Copy Public Key, Private Key, and URL Endpoint
@@ -55,12 +59,14 @@ IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/your_id
 ### User Capabilities
 
 **Student-Admin, Admin, Super-Admin:**
+
 - Upload multiple images and documents per announcement
 - Preview images before publishing
 - Remove attachments before publishing
 - See upload progress and errors
 
 **Students:**
+
 - View images inline within announcements
 - Download attached documents
 - Cannot upload attachments
@@ -68,16 +74,19 @@ IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/your_id
 ### File Restrictions
 
 **Images:**
+
 - Formats: JPG, PNG, GIF, WebP
 - Max size: 5MB per file
 
 **Documents:**
+
 - Formats: PDF, Word, Excel, PowerPoint, TXT
 - Max size: 10MB per file
 
 ## API Endpoints
 
 ### Upload Attachment
+
 ```
 POST /api/announcements/[id]/attachments
 Content-Type: multipart/form-data
@@ -99,6 +108,7 @@ Response:
 ```
 
 ### Get Attachments
+
 ```
 GET /api/announcements/[id]/attachments
 
@@ -110,6 +120,7 @@ Response:
 ```
 
 ### Delete Attachment
+
 ```
 DELETE /api/announcements/[id]/attachments?fileId=uuid
 
@@ -123,6 +134,7 @@ Response:
 ## Data Flow
 
 ### Upload Flow
+
 1. User selects files in CreateAnnouncementForm
 2. Form validation checks file size and type
 3. Announcement is created first
@@ -132,6 +144,7 @@ Response:
 7. User sees success/error for each upload
 
 ### Deletion Flow
+
 1. User deletes announcement
 2. Backend fetches all `imagekit_file_id` values
 3. Files are deleted from ImageKit
@@ -171,25 +184,31 @@ The file upload section appears in `CreateAnnouncementForm` immediately below th
 ### Key Files Created/Modified:
 
 **Database:**
+
 - `scripts/create-announcement-files-table.sql` - Schema definition
 
 **Configuration:**
+
 - `lib/config/imagekit.ts` - ImageKit client setup
 - `lib/config/env.ts` - Environment variable validation
 
 **Services:**
+
 - `lib/services/imagekit.ts` - Upload/delete/validation logic
 - `lib/data/announcement-files.ts` - Database operations
 
 **API Routes:**
+
 - `app/api/announcements/[id]/attachments/route.ts` - CRUD endpoints
 - `app/api/announcements/[id]/route.ts` - Updated DELETE handler
 
 **UI Components:**
+
 - `components/ui/FileUploadSection.tsx` - File upload interface
 - `components/forms/CreateAnnouncementForm.tsx` - Integrated form
 
 **Types:**
+
 - `lib/types/index.ts` - AnnouncementFile and AttachmentUpload types
 
 ## Testing Checklist
