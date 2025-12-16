@@ -15,11 +15,17 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || ''
+  
+  if (!publishableKey) {
+    console.warn('NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is not set. Clerk authentication may not work.')
+  }
+
   return (
     <html lang="en">
       <body className={inter.className}>
         <ClerkProvider
-          publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+          publishableKey={publishableKey}
           signInFallbackRedirectUrl="/"
           signUpFallbackRedirectUrl="/"
         >
