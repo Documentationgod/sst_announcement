@@ -27,6 +27,7 @@ export interface Announcement {
   visible_after?: string | null
   priority_level?: number 
   target_years?: number[] | null
+  url?: string | null
 }
 
 export interface User {
@@ -38,6 +39,7 @@ export interface User {
   is_admin?: boolean
   intake_year?: number | null
   year_level?: number | null
+  batch?: string | null // e.g., "23", "24A", "24B", "25A", "25B", "25C", "25D"
   created_at?: string
   last_login?: string
 }
@@ -59,6 +61,7 @@ export interface CreateAnnouncementData {
   emergency_expires_at?: string 
   priority_level?: number 
   target_years?: number[] | null
+  url?: string | null
 }
 
 export interface UpdateAnnouncementData {
@@ -74,6 +77,7 @@ export interface UpdateAnnouncementData {
   priority_until?: string | null
   priority_level?: number 
   target_years?: number[] | null
+  url?: string | null
 }
 
 export interface ApiResponse<T> {

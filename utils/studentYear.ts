@@ -42,4 +42,26 @@ export function getYearMetadataFromEmail(
   };
 }
 
+/**
+ * Extract batch from email (e.g., "23", "24A", "24B", "25A", "25B", "25C", "25D")
+ * Format: something.23a@domain.com or something.24b@domain.com
+ */
+export function extractBatchFromEmail(email?: string | null): string | null {
+  if (!email) return null;
+  
+  // Match pattern: .23a, .24b, .25c, etc.
+  const match = email.match(/\.([0-9]{2})([a-z])?/i);
+  if (!match) return null;
+  
+  const batchNumber = match[1];
+  const batchLetter = match[2]?.toUpperCase() || null;
+  
+  // Batch 23 has no letter, batches 24 and 25 have letters
+  if (batchLetter) {
+    return `${batchNumber}${batchLetter}`;
+  }
+  
+  return batchNumber;
+}
+
 

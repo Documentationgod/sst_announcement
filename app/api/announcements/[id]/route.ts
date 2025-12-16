@@ -71,6 +71,7 @@ export async function PATCH(
     if (body.status !== undefined) announcementUpdates.status = body.status;
     if (body.priority_level !== undefined) announcementUpdates.priorityLevel = body.priority_level;
     if (body.is_emergency !== undefined) announcementUpdates.isEmergency = body.is_emergency;
+    if (body.url !== undefined) announcementUpdates.url = body.url || null;
 
     // Settings fields
     if (body.expiry_date !== undefined) {

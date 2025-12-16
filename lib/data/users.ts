@@ -3,7 +3,7 @@ import { desc } from 'drizzle-orm';
 import { getDb } from '../config/db';
 import { users } from '../schema';
 import type { UserRole } from '../types/index';
-import { getYearMetadataFromEmail } from '@/utils/studentYear';
+import { getYearMetadataFromEmail, extractBatchFromEmail } from '@/utils/studentYear';
 import { isAllowedDomain } from '../middleware/domain';
 
 export async function findOrCreateUser(clerkId: string, email: string, displayName?: string) {
@@ -24,6 +24,8 @@ export async function findOrCreateUser(clerkId: string, email: string, displayNa
     return mapUser(updatedUser);
   }
 
+  const batch = extractBatchFromEmail(email);
+  
   const [newUser] = await db
     .insert(users)
     .values({
@@ -31,6 +33,7 @@ export async function findOrCreateUser(clerkId: string, email: string, displayNa
       email,
       username: displayName || null,
       role: 'user',
+      batch: batch || null,
       lastLogin: new Date(),
     })
     .returning();
@@ -40,9 +43,10 @@ export async function findOrCreateUser(clerkId: string, email: string, displayNa
 
 export async function updateUserEmail(userId: number, newEmail: string) {
   const db = getDb();
+  const batch = extractBatchFromEmail(newEmail);
   const [updatedUser] = await db
     .update(users)
-    .set({ email: newEmail })
+    .set({ email: newEmail, batch: batch || null })
     .where(eq(users.id, userId))
     .returning();
 
@@ -93,6 +97,7 @@ export async function getAllUsers() {
       last_login: user.lastLogin,
       intake_year: yearMetadata?.intakeYear ?? null,
       year_level: yearMetadata?.yearLevel ?? null,
+      batch: (user as any).batch || extractBatchFromEmail(user.email) || null,
     };
   });
 }
@@ -137,5 +142,6 @@ export function mapUser(user: typeof users.$inferSelect) {
     last_login: user.lastLogin,
     intake_year: yearMetadata?.intakeYear ?? null,
     year_level: yearMetadata?.yearLevel ?? null,
+    batch: (user as any).batch || extractBatchFromEmail(user.email) || null,
   };
 }

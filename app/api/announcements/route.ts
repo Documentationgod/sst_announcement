@@ -90,6 +90,7 @@ export async function POST(request: NextRequest) {
       is_emergency = false,
       emergency_expires_at = null,
       visible_after = null,
+      url = null,
     } = body;
 
     const db = getDb();
@@ -194,6 +195,7 @@ export async function POST(request: NextRequest) {
       status: finalStatus as 'scheduled' | 'active' | 'urgent' | 'expired',
       priorityLevel: finalPriorityLevel,
       isEmergency: isEmergencyAnnouncement,
+      url: url || null,
     };
 
     const [announcementRecord] = await db

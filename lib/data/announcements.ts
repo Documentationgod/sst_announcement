@@ -63,6 +63,7 @@ export function mapAnnouncement(data: FullAnnouncementData) {
     emergency_expires_at: settings?.emergencyExpiresAt || null,
     visible_after: settings?.visibleAfter || null,
     target_years: targetYears.length > 0 ? targetYears : null,
+    url: announcement.url || null,
   };
 }
 
@@ -115,7 +116,7 @@ async function fetchAnnouncementsWithJoins(options?: { limit?: number; offset?: 
           isActive: row.is_active,
           priorityLevel: row.priority_level,
           isEmergency: row.is_emergency,
-          tvUrl: row.tv_url,
+          url: row.url,
           createdAt: row.created_at,
           updatedAt: row.updated_at,
         },
@@ -202,7 +203,7 @@ export async function fetchAnnouncementById(id: number) {
           isActive: row.is_active,
           priorityLevel: row.priority_level,
           isEmergency: row.is_emergency,
-          tvUrl: row.tv_url,
+          url: row.url,
           createdAt: row.created_at,
           updatedAt: row.updated_at,
         },
@@ -285,7 +286,7 @@ export async function getTvData() {
           isActive: row.is_active,
           priorityLevel: row.priority_level,
           isEmergency: row.is_emergency,
-          tvUrl: row.tv_url,
+          url: row.url,
           createdAt: row.created_at,
           updatedAt: row.updated_at,
         },

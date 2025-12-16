@@ -26,6 +26,7 @@ export const users = pgTable('users', {
   email: text('email').notNull().unique(),
   username: varchar('username', { length: 100 }),
   role: userRoleEnum('role').default('student').notNull(),
+  batch: varchar('batch', { length: 10 }), // e.g., "23", "24A", "24B", "25A", "25B", "25C", "25D"
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   lastLogin: timestamp('last_login', { withTimezone: true }),
 });
@@ -41,8 +42,7 @@ export const announcements = pgTable('announcements', {
   isActive: boolean('is_active').default(true),
   priorityLevel: integer('priority_level').default(3).notNull(),
   isEmergency: boolean('is_emergency').default(false).notNull(),
-  // Optional URL used for TV display / QR code
-  tvUrl: varchar('tv_url', { length: 512 }),
+  url: varchar('url', { length: 512 }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }),
 });
@@ -75,7 +75,7 @@ export const announcementTargets = pgTable('announcement_targets', {
 export const announcementFiles = pgTable('announcement_files', {
   id: serial('id').primaryKey(),
   announcementId: integer('announcement_id').notNull().references(() => announcements.id, { onDelete: 'cascade' }),
-  url: text('url').notNull(),          // Cloudinary secure URL
+  cloudinaryUrl: text('cloudinary_url').notNull(),          // Cloudinary secure URL
   publicId: text('public_id'),         // Cloudinary public_id (optional)
   fileName: text('file_name'),         // Original file name
   mimeType: text('mime_type').default('application/pdf'),
