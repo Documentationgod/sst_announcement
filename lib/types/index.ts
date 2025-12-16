@@ -11,6 +11,7 @@ export interface AuthenticatedUser {
   is_admin?: boolean;
   intake_year?: number | null;
   year_level?: number | null;
+  batch?: string | null; // e.g., "23", "24A", "24B", "25A", "25B", "25C", "25D"
 }
 
 export interface ApiSuccessResponse<T> {
