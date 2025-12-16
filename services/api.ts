@@ -109,6 +109,17 @@ class ApiService {
     })
   }
 
+  // Attachment operations
+  async getAnnouncementAttachments(announcementId: string): Promise<ApiResponse<any[]>> {
+    return this.request<any[]>(`/api/announcements/${announcementId}/attachments`)
+  }
+
+  async deleteAttachment(announcementId: string, fileId: string): Promise<ApiResponse<{ message: string }>> {
+    return this.request<{ message: string }>(`/api/announcements/${announcementId}/attachments?fileId=${fileId}`, {
+      method: 'DELETE',
+    })
+  }
+
   // Announcement v1 features
   async scheduleAnnouncement(announcementId: number, scheduledAt: string): Promise<ApiResponse<any>> {
     return this.request<any>('/api/announcements/schedule', {
