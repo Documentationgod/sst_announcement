@@ -8,6 +8,7 @@ A comprehensive announcement management system for SCALER School of Technology, 
 - [Features](#-features)
 - [Architecture](#️-architecture)
 - [Quick Start](#-quick-start)
+- [File Upload Feature](#-file-upload-feature)
 - [API Endpoints](#-api-endpoints)
 - [Database Schema](#️-database-schema)
 - [Security Features](#-security-features)
@@ -33,6 +34,7 @@ The SST Announcement System is a full-stack Next.js application designed to mana
 ### Core Features
 - **Clerk Authentication** - Secure authentication with role-based access control
 - **Announcement Management** - Create, read, update, and delete announcements
+- **File Attachments** - Upload images and documents to announcements via ImageKit CDN
 - **Category System** - Organize announcements by categories (Academic, Sil, Club, General)
 - **Scheduling** - Schedule announcements for future publication (Super Admin only)
 - **Expiry Management** - Set expiry dates with visual indicators for expired announcements
@@ -242,7 +244,45 @@ sst_announcement/
    - Application: http://localhost:3000
    - API Routes: http://localhost:3000/api/*
 
-## 📚 API Endpoints
+## � File Upload Feature
+
+The system supports attaching images and documents to announcements using ImageKit CDN.
+
+### Quick Setup
+
+1. **Get ImageKit credentials** from https://imagekit.io (free tier available)
+
+2. **Add to `.env.local`:**
+   ```env
+   IMAGEKIT_PUBLIC_KEY=your_public_key
+   IMAGEKIT_PRIVATE_KEY=your_private_key
+   IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/your_id
+   ```
+
+3. **Run database migration:**
+   ```bash
+   psql $DATABASE_URL -f scripts/create-announcement-files-table.sql
+   ```
+
+4. **Verify setup:**
+   ```bash
+   npx tsx scripts/verify-imagekit-setup.ts
+   ```
+
+### Features
+- **Multiple file uploads** per announcement
+- **Supported formats:**
+  - Images: JPG, PNG, GIF, WebP (max 5MB)
+  - Documents: PDF, Word, Excel, PowerPoint, TXT (max 10MB)
+- **Automatic optimization** via ImageKit CDN
+- **Cascade deletion** - attachments deleted with announcements
+- **Role-based access** - only admins can upload
+
+### Documentation
+- **Setup Guide**: [docs/SETUP_FILE_UPLOAD.md](docs/SETUP_FILE_UPLOAD.md)
+- **Full Documentation**: [docs/FILE_UPLOAD_FEATURE.md](docs/FILE_UPLOAD_FEATURE.md)
+
+## �📚 API Endpoints
 
 ### Public Endpoints
 - `GET /api/announcements` - Get all announcements (with pagination: `?limit=10&offset=0`)
