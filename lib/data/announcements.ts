@@ -256,7 +256,10 @@ export async function getTvData() {
     FROM announcements a
     INNER JOIN announcement_settings s ON a.id = s.announcement_id
     LEFT JOIN announcement_targets t ON a.id = t.announcement_id
-    WHERE s.send_tv = true
+    WHERE 
+      s.send_tv = true
+      AND a.is_active = true
+      AND (s.expiry_date IS NULL OR s.expiry_date > NOW())
     ORDER BY a.created_at DESC
     LIMIT 5
     `
