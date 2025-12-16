@@ -15,6 +15,9 @@ const optionalEnvVars = [
   'RESEND_FROM_EMAIL',
   'DEPLOYMENT',
   'CRON_SECRET',
+  'IMAGEKIT_PUBLIC_KEY',
+  'IMAGEKIT_PRIVATE_KEY',
+  'IMAGEKIT_URL_ENDPOINT',
 ];
 
 let validated = false;
@@ -33,6 +36,9 @@ export interface EnvConfig {
   RESEND_FROM_EMAIL?: string;
   DEPLOYMENT?: string;
   CRON_SECRET?: string;
+  IMAGEKIT_PUBLIC_KEY?: string;
+  IMAGEKIT_PRIVATE_KEY?: string;
+  IMAGEKIT_URL_ENDPOINT?: string;
 }
 
 export function validateEnv(): EnvConfig {

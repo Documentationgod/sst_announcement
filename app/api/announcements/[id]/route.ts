@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { applyRateLimit, generalLimiterOptions, adminLimiterOptions } from '@/lib/middleware/rateLimit';
 import { fetchAnnouncementById } from '@/lib/data/announcements';
+import { deleteAnnouncementFiles } from '@/lib/data/announcement-files';
+import { deleteMultipleFromImageKit } from '@/lib/services/imagekit';
 import { requireAuth, requireAdmin } from '@/lib/middleware/auth';
 import { requireAllowedDomain } from '@/lib/middleware/domain';
 import { BadRequestError, NotFoundError } from '@/lib/utils/errors';
@@ -253,6 +255,13 @@ export async function DELETE(
 
     const { id: idParam } = await params;
     const id = parseId(idParam, 'Announcement ID');
+    
+    // Delete associated files from ImageKit before deleting the announcement
+    const imagekitFileIds = await deleteAnnouncementFiles(id);
+    if (imagekitFileIds.length > 0) {
+      await deleteMultipleFromImageKit(imagekitFileIds);
+    }
+    
     const db = getDb();
     const result = await db
       .delete(announcements)

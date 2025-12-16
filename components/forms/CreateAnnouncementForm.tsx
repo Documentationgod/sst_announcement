@@ -3,9 +3,11 @@
 import React, { useState } from 'react'
 import { Button } from '../ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
+import FileUploadSection from '../ui/FileUploadSection'
 import { apiService } from '@/services/api'
 import { useToast } from '@/hooks/useToast'
 import type { CreateAnnouncementData } from '@/types'
+import type { AttachmentUpload } from '@/lib/types'
 
 interface CreateAnnouncementFormProps {
   onClose: () => void
@@ -15,6 +17,7 @@ interface CreateAnnouncementFormProps {
 const CreateAnnouncementForm: React.FC<CreateAnnouncementFormProps> = ({ onClose, onSuccess }) => {
   const { showToast } = useToast()
   const [loading, setLoading] = useState(false)
+  const [attachments, setAttachments] = useState<AttachmentUpload[]>([])
   const [formData, setFormData] = useState<CreateAnnouncementData>({
     title: '',
     description: '',
@@ -41,6 +44,59 @@ const CreateAnnouncementForm: React.FC<CreateAnnouncementFormProps> = ({ onClose
     }))
   }
 
+  const handleFilesAdd = (files: File[]) => {
+    const newAttachments: AttachmentUpload[] = files.map(file => {
+      const attachment: AttachmentUpload = { file }
+      
+      // Create preview for images
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader()
+        reader.onloadend = () => {
+          setAttachments(prev =>
+            prev.map(a =>
+              a.file === file ? { ...a, preview: reader.result as string } : a
+            )
+          )
+        }
+        reader.readAsDataURL(file)
+      }
+      
+      return attachment
+    })
+    
+    setAttachments(prev => [...prev, ...newAttachments])
+  }
+
+  const handleFileRemove = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const uploadAttachments = async (announcementId: string) => {
+    const uploadPromises = attachments.map(async (attachment, index) => {
+      const formData = new FormData()
+      formData.append('file', attachment.file)
+      formData.append('displayOrder', index.toString())
+
+      try {
+        const response = await fetch(`/api/announcements/${announcementId}/attachments`, {
+          method: 'POST',
+          body: formData,
+        })
+
+        const result = await response.json()
+        if (!result.success) {
+          throw new Error(result.error || 'Upload failed')
+        }
+
+        return { success: true, index }
+      } catch (error: any) {
+        return { success: false, index, error: error.message }
+      }
+    })
+
+    return await Promise.allSettled(uploadPromises)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -51,14 +107,32 @@ const CreateAnnouncementForm: React.FC<CreateAnnouncementFormProps> = ({ onClose
 
     setLoading(true)
     try {
+      // Create announcement first
       const response = await apiService.createAnnouncement(formData)
-      if (response.success) {
-        showToast('Announcement created successfully!', 'success')
-        onSuccess?.()
-        onClose()
-      } else {
+      if (!response.success) {
         showToast(response.error || 'Failed to create announcement', 'error')
+        return
       }
+
+      // Upload attachments if any
+      if (attachments.length > 0 && response.data?.id) {
+        const uploadResults = await uploadAttachments(response.data.id)
+        const failedUploads = uploadResults.filter(
+          (result): result is PromiseRejectedResult | PromiseFulfilledResult<{ success: false; index: number; error: string }> => 
+            result.status === 'rejected' || (result.status === 'fulfilled' && !result.value.success)
+        )
+
+        if (failedUploads.length > 0) {
+          showToast(`Announcement created, but ${failedUploads.length} attachment(s) failed to upload`, 'warning')
+        } else {
+          showToast('Announcement created successfully with attachments!', 'success')
+        }
+      } else {
+        showToast('Announcement created successfully!', 'success')
+      }
+
+      onSuccess?.()
+      onClose()
     } catch (error) {
       console.error('Error creating announcement:', error)
       showToast('Error creating announcement', 'error')
@@ -124,6 +198,14 @@ const CreateAnnouncementForm: React.FC<CreateAnnouncementFormProps> = ({ onClose
                 required
               />
             </div>
+
+            {/* File Upload Section */}
+            <FileUploadSection
+              attachments={attachments}
+              onFilesAdd={handleFilesAdd}
+              onFileRemove={handleFileRemove}
+              disabled={loading}
+            />
 
             {/* Category */}
             <div>
