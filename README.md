@@ -32,6 +32,7 @@ The SST Announcement System is a full-stack Next.js application designed to mana
 ## ✨ Features
 
 ### Core Features
+
 - **Clerk Authentication** - Secure authentication with role-based access control
 - **Announcement Management** - Create, read, update, and delete announcements
 - **File Attachments** - Upload images and documents to announcements via ImageKit CDN
@@ -49,11 +50,13 @@ The SST Announcement System is a full-stack Next.js application designed to mana
 - **Rate Limiting** - API rate limiting to prevent abuse with multiple tiers
 
 ### Admin Features
+
 - **Role-Based Access Control** - Four user roles: Student, Student Admin, Admin, Super Admin
 - **User Management** - Manage users, roles, and admin privileges (Super Admin only)
 - **Shared Authentication Middleware** - Reusable `authenticateRequest` helper for consistent auth across routes
 
 ### UI/UX Features
+
 - **SCALER Branding** - Professional design with SCALER School of Technology branding
 - **Dark Theme** - Modern dark mode design with gradient backgrounds
 - **Glassmorphism** - Frosted glass effects on cards and panels
@@ -69,6 +72,7 @@ The SST Announcement System is a full-stack Next.js application designed to mana
 ## 🏗️ Architecture
 
 ### Technology Stack
+
 - **Framework**: Next.js 16.0.7 (App Router)
 - **Language**: TypeScript 5.6.3
 - **UI Library**: React 19.2.1
@@ -185,6 +189,7 @@ sst_announcement/
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - Node.js (v18 or higher)
 - PostgreSQL database
 - Clerk account (for authentication)
@@ -193,34 +198,37 @@ sst_announcement/
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone <repository-url>
    cd sst_announcement
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    ```
 
 3. **Set up environment variables**
-   
+
    Create a `.env.local` file in the root directory:
+
    ```env
    # Database (Required)
    DATABASE_URL=postgresql://user:password@localhost:5432/database_name
-   
+
    # Clerk Authentication (Required)
    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
    CLERK_SECRET_KEY=sk_test_...
-   
+
    # Session (Required)
    SESSION_SECRET=your_session_secret
-   
+
    # Email (Resend) - Optional
    RESEND_API_KEY=re_...
    RESEND_FROM_EMAIL=noreply@yourdomain.com
-   
+
    # Optional Configuration
    FRONTEND_URL=http://localhost:3000
    BACKEND_URL=http://localhost:3000
@@ -229,20 +237,21 @@ sst_announcement/
    ```
 
 4. **Set up the database**
-   
+
    The database schema is defined in `lib/schema.ts` using Drizzle ORM. You'll need to:
    - Create the database tables manually based on the schema
    - Ensure all required tables exist: `users`, `announcements`
    - Add any missing columns if you encounter schema errors (see [Database Schema Updates](#-database-schema-updates) section)
 
 5. **Start the development server**
+
    ```bash
    npm run dev
    ```
 
 6. **Access the Application**
    - Application: http://localhost:3000
-   - API Routes: http://localhost:3000/api/*
+   - API Routes: http://localhost:3000/api/\*
 
 ## � File Upload Feature
 
@@ -253,6 +262,7 @@ The system supports attaching images and documents to announcements using ImageK
 1. **Get ImageKit credentials** from https://imagekit.io (free tier available)
 
 2. **Add to `.env.local`:**
+
    ```env
    IMAGEKIT_PUBLIC_KEY=your_public_key
    IMAGEKIT_PRIVATE_KEY=your_private_key
@@ -260,6 +270,7 @@ The system supports attaching images and documents to announcements using ImageK
    ```
 
 3. **Run database migration:**
+
    ```bash
    psql $DATABASE_URL -f scripts/create-announcement-files-table.sql
    ```
@@ -270,6 +281,7 @@ The system supports attaching images and documents to announcements using ImageK
    ```
 
 ### Features
+
 - **Multiple file uploads** per announcement
 - **Supported formats:**
   - Images: JPG, PNG, GIF, WebP (max 5MB)
@@ -279,23 +291,27 @@ The system supports attaching images and documents to announcements using ImageK
 - **Role-based access** - only admins can upload
 
 ### Documentation
+
 - **Setup Guide**: [docs/SETUP_FILE_UPLOAD.md](docs/SETUP_FILE_UPLOAD.md)
 - **Full Documentation**: [docs/FILE_UPLOAD_FEATURE.md](docs/FILE_UPLOAD_FEATURE.md)
 
 ## �📚 API Endpoints
 
 ### Public Endpoints
+
 - `GET /api/announcements` - Get all announcements (with pagination: `?limit=10&offset=0`)
 - `GET /api/announcements/[id]` - Get announcement by ID
 - `GET /api/tv` - Get announcements for TV display (where `send_tv = true`, returns top 5)
 
 ### Authenticated Endpoints
+
 - `GET /api/profile` - Get current user profile
 - `POST /api/announcements` - Create announcement (Student Admin+)
 - `PATCH /api/announcements/[id]` - Update announcement (Admin+)
 - `DELETE /api/announcements/[id]` - Delete announcement (Admin+)
 
 ### Admin Endpoints
+
 - `GET /api/admin/dashboard` - Get admin dashboard stats (Admin+)
 - `GET /api/admin/users` - Get all users (Admin+)
 - `GET /api/admin/users/[id]` - Get user by ID (Admin+)
@@ -303,12 +319,14 @@ The system supports attaching images and documents to announcements using ImageK
 - `PATCH /api/admin/users/[id]/admin-status` - Update admin status (Super Admin only)
 
 ### Utility Endpoints
+
 - `POST /api/test-email` - Test email functionality (Admin+)
 - `GET /api/debug-email` - Debug email configuration (Admin+)
 
 ## 🗄️ Database Schema
 
 ### Users Table (`users`)
+
 - `id` - Primary key (serial)
 - `clerk_id` - Unique Clerk user ID (text, not null, unique)
 - `email` - User email (text, not null, unique)
@@ -318,6 +336,7 @@ The system supports attaching images and documents to announcements using ImageK
 - `last_login` - Last login timestamp (with timezone)
 
 ### Announcements Table (`announcements`)
+
 - `id` - Primary key (serial)
 - `title` - Announcement title (varchar 255, not null)
 - `description` - Full description (text, not null)
@@ -352,12 +371,13 @@ The system supports attaching images and documents to announcements using ImageK
 - **Environment Variable Protection** - Sensitive data in `.env.local` with validation
 - **Request Validation** - Input validation for all API endpoints
 - **IP-based Rate Limiting** - Tracks requests by client IP address
-- **Shared Authentication Middleware** - Centralized authentication helper (`authenticateRequest`) ensures 
-consistent security across all admin routes
+- **Shared Authentication Middleware** - Centralized authentication helper (`authenticateRequest`) ensures
+  consistent security across all admin routes
 
 ## 🎨 User Roles & Permissions
 
 ### Student
+
 - View active announcements
 - View announcements with deadlines regardless of status
 - View scheduled announcements once scheduled time has passed
@@ -367,18 +387,21 @@ consistent security across all admin routes
 - See approaching deadline/expiry alerts (within 7 days)
 
 ### Student Admin
+
 - All student permissions
 - Create and manage own announcements
 - Cannot schedule or access admin features
 - Cannot edit/delete other users' announcements
 
 ### Admin
+
 - All Student Admin permissions
 - Manage all announcements (edit, delete)
 - View all users
 - Cannot manage user roles or schedule announcements
 
 ### Super Admin
+
 - All Admin permissions
 - Schedule announcements for future publication
 - Manage user roles and admin status
@@ -422,6 +445,7 @@ The system implements multiple rate limiting tiers to protect against API abuse.
 ### Using Authentication Middleware
 
 The system includes a shared `authenticateRequest` helper in `lib/middleware/withAuth.ts` that combines:
+
 - Rate limiting
 - User authentication
 - Domain validation
@@ -433,15 +457,16 @@ To adjust rate limits, modify the options in `lib/middleware/rateLimit.ts`:
 
 ```typescript
 export const generalLimiterOptions: RateLimitOptions = {
-  windowMs: 15 * 60 * 1000,  // 15 minutes in milliseconds
-  max: 100,                   // Maximum requests per window
-  keyPrefix: 'general',       // Prefix for storage key
+  windowMs: 15 * 60 * 1000, // 15 minutes in milliseconds
+  max: 100, // Maximum requests per window
+  keyPrefix: "general", // Prefix for storage key
 };
 ```
 
 ## 📧 Email Notifications
 
 The system uses Resend API for email notifications:
+
 - Configured via `RESEND_API_KEY` and `RESEND_FROM_EMAIL` environment variables
 - Sends formatted HTML emails for announcements
 - Tracks email delivery status (`email_sent` field)
@@ -474,6 +499,7 @@ The system uses Resend API for email notifications:
 ## 🛠️ Development
 
 ### Available Scripts
+
 ```bash
 npm run dev        # Start development server
 npm run build      # Build for production
@@ -483,6 +509,7 @@ npm run type-check # TypeScript type checking
 ```
 
 ### Key Technologies
+
 - **Next.js 16** - React framework with App Router
 - **Drizzle ORM** - Type-safe database queries
 - **Clerk** - Authentication and user management
@@ -493,6 +520,7 @@ npm run type-check # TypeScript type checking
 - **Lucide React** - Icon library
 
 ### Development Workflow
+
 1. Make changes to code
 2. Run `npm run type-check` to verify TypeScript
 3. Run `npm run lint` to check code quality
@@ -502,11 +530,13 @@ npm run type-check # TypeScript type checking
 ## 🚀 Deployment
 
 ### Vercel Deployment
+
 1. Connect your repository to Vercel
 2. Configure environment variables in Vercel dashboard
 3. Deploy automatically on push to main branch
 
 ### Environment Variables for Production
+
 - `DATABASE_URL` - Production PostgreSQL connection string
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` - Clerk publishable key
 - `CLERK_SECRET_KEY` - Clerk secret key
@@ -517,14 +547,18 @@ npm run type-check # TypeScript type checking
 - `CRON_SECRET` - Secret for cron job authentication
 
 ### Cron Jobs
+
 The system includes a daily cron job (configured in `vercel.json`) for scheduled announcements:
+
 - **Path**: `/api/scheduler`
 - **Schedule**: `0 0 * * *` (daily at midnight UTC)
 - **Purpose**: Processes scheduled announcements and updates announcement statuses
 - **Note**: Vercel Hobby plan only supports daily cron jobs
 
 ### CORS Configuration
+
 CORS is handled in two places:
+
 1. **Next.js Middleware** (`middleware.ts`) - Handles CORS for all `/api` routes
 2. **Vercel Headers** (`vercel.json`) - Additional CORS headers for deployment
 
@@ -566,7 +600,7 @@ CORS is handled in two places:
    - The `send_tv` column needs to be added to the `announcements` table
    - Run this SQL command in your PostgreSQL database:
      ```sql
-     ALTER TABLE announcements 
+     ALTER TABLE announcements
      ADD COLUMN IF NOT EXISTS send_tv BOOLEAN DEFAULT false NOT NULL;
      ```
    - Or connect to your database and execute the SQL directly
@@ -590,50 +624,60 @@ CORS is handled in two places:
 ## 📝 Database Schema Updates
 
 ### Adding Missing Columns
+
 If you encounter errors about missing columns, you can add them manually using SQL:
 
 **Add `send_tv` column:**
+
 ```sql
-ALTER TABLE announcements 
+ALTER TABLE announcements
 ADD COLUMN IF NOT EXISTS send_tv BOOLEAN DEFAULT false NOT NULL;
 ```
 
 **Add `priority_until` column (if needed):**
+
 ```sql
-ALTER TABLE announcements 
+ALTER TABLE announcements
 ADD COLUMN IF NOT EXISTS priority_until TIMESTAMPTZ;
 ```
 
 **Add `target_years` column (if needed):**
+
 ```sql
-ALTER TABLE announcements 
+ALTER TABLE announcements
 ADD COLUMN IF NOT EXISTS target_years INTEGER[];
 ```
 
 **Add `visible_after` column (if needed):**
+
 ```sql
-ALTER TABLE announcements 
+ALTER TABLE announcements
 ADD COLUMN IF NOT EXISTS visible_after TIMESTAMPTZ;
 ```
 
 **Add `deadlines` column (if needed):**
+
 ```sql
-ALTER TABLE announcements 
+ALTER TABLE announcements
 ADD COLUMN IF NOT EXISTS deadlines JSONB DEFAULT '[]'::jsonb;
 
 -- Optional: Add GIN index for better query performance
-CREATE INDEX IF NOT EXISTS idx_announcements_deadlines 
+CREATE INDEX IF NOT EXISTS idx_announcements_deadlines
 ON announcements USING GIN (deadlines);
 ```
 
 ### Removing Unused Tables
+
 If you need to remove unused tables, you can do so manually:
+
 ```sql
 DROP TABLE IF EXISTS announcement_comments CASCADE;
 ```
 
 ### Manual Schema Updates
+
 The database schema is defined in `lib/schema.ts` using Drizzle ORM. When adding new columns or tables:
+
 1. Update the schema in `lib/schema.ts`
 2. Run the corresponding SQL ALTER TABLE commands in your database
 3. Ensure the schema matches your database structure
@@ -653,6 +697,7 @@ ISC License
 ## 📞 Support
 
 For issues and questions:
+
 - Create an issue in the repository
 - Check existing documentation files
 - Review API route implementations in `app/api/`
