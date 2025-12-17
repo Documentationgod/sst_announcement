@@ -5,9 +5,10 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import AttachmentList from '../ui/AttachmentList';
 import { apiService } from '@/services/api';
 import type { Announcement, User, CreateAnnouncementData, UpdateAnnouncementData } from '@/types';
-import type { AttachmentUpload } from '@/lib/types';
+import type { AttachmentUpload, AnnouncementFile } from '@/lib/types';
 import { useAppUser } from '@/contexts/AppUserContext';
 import { isAnnouncementExpired, formatDateTime } from '@/utils/dateUtils';
 import {
@@ -64,6 +65,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [announcementsToShow, setAnnouncementsToShow] = useState<number>(5);
+  const [attachmentsMap, setAttachmentsMap] = useState<Record<string, AnnouncementFile[]>>({});
 
   // Determine user role with proper normalization for backward compatibility
   const derivedRole: UserRole = normalizeUserRole(user?.role, user?.is_admin);
@@ -176,6 +178,25 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
   useEffect(() => {
     setAnnouncementsToShow(5);
   }, [searchQuery, filterCategory]);
+
+  // Fetch attachments for all announcements
+  useEffect(() => {
+    announcements.forEach(async (announcement) => {
+      if (announcement.id) {
+        try {
+          const response = await apiService.getAnnouncementAttachments(announcement.id.toString())
+          if (response.success && response.data) {
+            setAttachmentsMap(prev => ({
+              ...prev,
+              [announcement.id!]: response.data!
+            }))
+          }
+        } catch (error) {
+          console.error(`Error fetching attachments for announcement ${announcement.id}:`, error)
+        }
+      }
+    })
+  }, [announcements])
 
   // Get the announcements to display (first N announcements)
   const displayedAnnouncements = sortedForRecentAnnouncements.slice(0, announcementsToShow);
@@ -851,6 +872,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                                 {expandedId === a.id && (
                                   <div className="text-sm text-gray-300 leading-relaxed animate-in fade-in slide-in-from-top duration-300">
                                     {parseLinks(a.description)}
+                                    {a.id && attachmentsMap[a.id] && attachmentsMap[a.id].length > 0 && (
+                                      <div className="mt-4">
+                                        <AttachmentList attachments={attachmentsMap[a.id]} />
+                                      </div>
+                                    )}
                                   </div>
                                 )}
                               </div>
