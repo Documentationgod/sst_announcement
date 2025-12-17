@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -66,6 +66,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [announcementsToShow, setAnnouncementsToShow] = useState<number>(5);
   const [attachmentsMap, setAttachmentsMap] = useState<Record<string, AnnouncementFile[]>>({});
+  const fetchingAttachments = useRef<Set<number>>(new Set());
 
   // Determine user role with proper normalization for backward compatibility
   const derivedRole: UserRole = normalizeUserRole(user?.role, user?.is_admin);
@@ -179,25 +180,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
     setAnnouncementsToShow(5);
   }, [searchQuery, filterCategory]);
 
-  // Get the announcements to display (first N announcements)
-  const displayedAnnouncements = sortedForRecentAnnouncements.slice(0, announcementsToShow);
+  // Get the announcements to display (first N announcements) - memoized to prevent recalculation
+  const displayedAnnouncements = useMemo(
+    () => sortedForRecentAnnouncements.slice(0, announcementsToShow),
+    [sortedForRecentAnnouncements, announcementsToShow]
+  );
   const hasMoreAnnouncements = sortedForRecentAnnouncements.length > announcementsToShow;
-
-  // Preload attachments for displayed announcements (recent 5)
-  useEffect(() => {
-    displayedAnnouncements.forEach((announcement) => {
-      if (announcement.id && !attachmentsMap[announcement.id]) {
-        fetchAttachments(announcement.id);
-      }
-    });
-  }, [displayedAnnouncements]);
 
   // Fetch attachments only when announcement is expanded (lazy loading)
   const fetchAttachments = async (announcementId: number) => {
-    // Skip if already fetched
-    if (attachmentsMap[announcementId]) {
+    // Skip if already fetched or currently fetching
+    if (attachmentsMap[announcementId] || fetchingAttachments.current.has(announcementId)) {
       return;
     }
+
+    // Mark as fetching
+    fetchingAttachments.current.add(announcementId);
 
     try {
       const response = await apiService.getAnnouncementAttachments(announcementId.toString());
@@ -209,8 +207,20 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
       }
     } catch (error) {
       console.error(`Error fetching attachments for announcement ${announcementId}:`, error);
+    } finally {
+      // Remove from fetching set
+      fetchingAttachments.current.delete(announcementId);
     }
   };
+
+  // Preload attachments for displayed announcements (recent 5)
+  useEffect(() => {
+    displayedAnnouncements.forEach((announcement) => {
+      if (announcement.id) {
+        fetchAttachments(announcement.id);
+      }
+    });
+  }, [displayedAnnouncements]);
 
   // Clicking an announcement will record a 'view' event instead of auto-tracking on render
   const handleEditAnnouncement = (announcement: Announcement) => {
