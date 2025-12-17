@@ -213,13 +213,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
     try {
       const response = await apiService.createAnnouncement(data);
       if (response.success) {
-        console.log('[Dashboard] Announcement created:', response.data?.id);
+        const announcementId = response.data?.announcement?.id;
+        console.log('[Dashboard] Announcement created:', announcementId);
         console.log('[Dashboard] Attachments to upload:', attachments?.length || 0);
         
         // Upload attachments if any and if announcement was created successfully
-        if (attachments && attachments.length > 0 && response.data?.id) {
-          const announcementId = response.data.id.toString();
-          console.log('[Dashboard] Starting attachment uploads for announcement:', announcementId);
+        if (attachments && attachments.length > 0 && announcementId) {
+          const announcementIdStr = announcementId.toString();
+          console.log('[Dashboard] Starting attachment uploads for announcement:', announcementIdStr);
           
           // Upload each attachment
           const uploadPromises = attachments.map(async (attachment, index) => {
@@ -229,7 +230,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
             formData.append('displayOrder', index.toString());
 
             try {
-              const uploadResponse = await fetch(`/api/announcements/${announcementId}/attachments`, {
+              const uploadResponse = await fetch(`/api/announcements/${announcementIdStr}/attachments`, {
                 method: 'POST',
                 body: formData,
               });
@@ -265,7 +266,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
         setCreateModalVariant('standard');
         
         // Show success message based on user role
-        const announcement = response.data;
+        const announcement = response.data?.announcement;
         if (user?.role !== 'super_admin') {
           // Regular admin: announcement goes to review
           showToast(
