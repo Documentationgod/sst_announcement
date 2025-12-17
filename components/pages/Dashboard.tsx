@@ -217,10 +217,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
   useEffect(() => {
     displayedAnnouncements.forEach((announcement) => {
       if (announcement.id) {
-        fetchAttachments(announcement.id);
+        // Only fetch if we don't already have the data
+        if (!attachmentsMap[announcement.id] && !fetchingAttachments.current.has(announcement.id)) {
+          fetchAttachments(announcement.id);
+        }
       }
     });
-  }, [displayedAnnouncements]);
+  }, [displayedAnnouncements, attachmentsMap]);
 
   // Clicking an announcement will record a 'view' event instead of auto-tracking on render
   const handleEditAnnouncement = (announcement: Announcement) => {
