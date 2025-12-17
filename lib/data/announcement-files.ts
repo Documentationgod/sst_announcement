@@ -1,4 +1,4 @@
-import { db } from '@/lib/config/db';
+import { getPool } from '@/lib/config/db';
 
 export interface AnnouncementFile {
   id: string;
@@ -55,7 +55,7 @@ export async function createAnnouncementFile(
     data.uploaded_by,
   ];
 
-  const result = await db.query(query, values);
+  const result = await getPool().query(query, values);
   return result.rows[0];
 }
 
@@ -71,7 +71,7 @@ export async function getAnnouncementFiles(
     ORDER BY display_order ASC, created_at ASC
   `;
 
-  const result = await db.query(query, [announcementId]);
+  const result = await getPool().query(query, [announcementId]);
   return result.rows;
 }
 
@@ -86,7 +86,7 @@ export async function getAnnouncementFileById(
     WHERE id = $1
   `;
 
-  const result = await db.query(query, [fileId]);
+  const result = await getPool().query(query, [fileId]);
   return result.rows[0] || null;
 }
 
@@ -100,7 +100,7 @@ export async function deleteAnnouncementFile(fileId: string): Promise<boolean> {
     RETURNING imagekit_file_id
   `;
 
-  const result = await db.query(query, [fileId]);
+  const result = await getPool().query(query, [fileId]);
   return result.rows.length > 0;
 }
 
@@ -116,7 +116,7 @@ export async function deleteAnnouncementFiles(
     RETURNING imagekit_file_id
   `;
 
-  const result = await db.query(query, [announcementId]);
+  const result = await getPool().query(query, [announcementId]);
   return result.rows.map(row => row.imagekit_file_id);
 }
 
@@ -126,7 +126,7 @@ export async function deleteAnnouncementFiles(
 export async function createMultipleAnnouncementFiles(
   files: CreateAnnouncementFileData[]
 ): Promise<AnnouncementFile[]> {
-  const client = await db.connect();
+  const client = await getPool().connect();
   
   try {
     await client.query('BEGIN');
