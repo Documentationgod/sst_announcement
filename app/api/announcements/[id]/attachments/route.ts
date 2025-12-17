@@ -105,7 +105,7 @@ export async function POST(
     // Save metadata to database
     const fileCategory = getFileCategory(file.type);
     const fileRecord = await createAnnouncementFile({
-      announcement_id: params.id,
+      announcement_id: parseInt(params.id, 10),
       file_url: uploadResult.url,
       imagekit_file_id: uploadResult.fileId,
       file_name: uploadResult.name,
