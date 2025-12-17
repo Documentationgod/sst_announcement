@@ -31,34 +31,34 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({ imageUrl, fileName, onClo
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-xl animate-in fade-in duration-300"
       onClick={onClose}
     >
       {/* Close Button */}
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 p-2 rounded-lg bg-gray-900/80 hover:bg-gray-800 text-white transition-colors z-10"
+        className="absolute top-6 right-6 p-3 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white transition-all duration-200 shadow-lg hover:scale-110 z-10"
         aria-label="Close"
       >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
 
       {/* File Name */}
-      <div className="absolute top-4 left-4 px-4 py-2 rounded-lg bg-gray-900/80 backdrop-blur-sm">
-        <p className="text-sm text-white font-medium">{fileName}</p>
+      <div className="absolute top-6 left-6 px-5 py-3 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 shadow-lg">
+        <p className="text-sm text-white font-medium truncate max-w-md">{fileName}</p>
       </div>
 
-      {/* Image */}
+      {/* Image Container - Full Screen */}
       <div
-        className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center"
+        className="relative w-screen h-screen flex items-center justify-center p-4"
         onClick={(e) => e.stopPropagation()}
       >
         <img
           src={imageUrl}
           alt={fileName}
-          className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+          className="max-w-full max-h-full object-contain drop-shadow-2xl animate-in zoom-in-95 fade-in duration-300"
         />
       </div>
     </div>
