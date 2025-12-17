@@ -179,24 +179,25 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
     setAnnouncementsToShow(5);
   }, [searchQuery, filterCategory]);
 
-  // Fetch attachments for all announcements
-  useEffect(() => {
-    announcements.forEach(async (announcement) => {
-      if (announcement.id) {
-        try {
-          const response = await apiService.getAnnouncementAttachments(announcement.id.toString())
-          if (response.success && response.data) {
-            setAttachmentsMap(prev => ({
-              ...prev,
-              [announcement.id!]: response.data!
-            }))
-          }
-        } catch (error) {
-          console.error(`Error fetching attachments for announcement ${announcement.id}:`, error)
-        }
+  // Fetch attachments only when announcement is expanded (lazy loading)
+  const fetchAttachments = async (announcementId: number) => {
+    // Skip if already fetched
+    if (attachmentsMap[announcementId]) {
+      return;
+    }
+
+    try {
+      const response = await apiService.getAnnouncementAttachments(announcementId.toString());
+      if (response.success && response.data) {
+        setAttachmentsMap(prev => ({
+          ...prev,
+          [announcementId]: response.data!
+        }));
       }
-    })
-  }, [announcements])
+    } catch (error) {
+      console.error(`Error fetching attachments for announcement ${announcementId}:`, error);
+    }
+  };
 
   // Get the announcements to display (first N announcements)
   const displayedAnnouncements = sortedForRecentAnnouncements.slice(0, announcementsToShow);
@@ -895,6 +896,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                                 onClick={() => {
                                   const nextId = expandedId === a.id ? null : (a.id ?? null);
                                   setExpandedId(nextId);
+                                  // Fetch attachments when expanding
+                                  if (nextId && a.id) {
+                                    fetchAttachments(a.id);
+                                  }
                                 }}
                                 title={expandedId === a.id ? 'Collapse' : 'Expand'}
                                 aria-expanded={expandedId === a.id}
