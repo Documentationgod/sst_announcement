@@ -80,6 +80,9 @@ export function getEnvConfig(): EnvConfig {
     RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
     DEPLOYMENT: process.env.DEPLOYMENT,
     CRON_SECRET: process.env.CRON_SECRET,
+    IMAGEKIT_PUBLIC_KEY: process.env.IMAGEKIT_PUBLIC_KEY,
+    IMAGEKIT_PRIVATE_KEY: process.env.IMAGEKIT_PRIVATE_KEY,
+    IMAGEKIT_URL_ENDPOINT: process.env.IMAGEKIT_URL_ENDPOINT,
   };
 }
 
