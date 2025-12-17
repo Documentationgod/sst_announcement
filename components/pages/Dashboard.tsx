@@ -7,6 +7,7 @@ import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { apiService } from '@/services/api';
 import type { Announcement, User, CreateAnnouncementData, UpdateAnnouncementData } from '@/types';
+import type { AttachmentUpload } from '@/lib/types';
 import { useAppUser } from '@/contexts/AppUserContext';
 import { isAnnouncementExpired, formatDateTime } from '@/utils/dateUtils';
 import {
@@ -186,11 +187,49 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
     setShowEditForm(true);
   };
 
-  const handleCreateAnnouncement = async (data: CreateAnnouncementData) => {
+  const handleCreateAnnouncement = async (data: CreateAnnouncementData, attachments?: AttachmentUpload[]) => {
     setCreateLoading(true);
     try {
       const response = await apiService.createAnnouncement(data);
       if (response.success) {
+        // Upload attachments if any and if announcement was created successfully
+        if (attachments && attachments.length > 0 && response.data?.id) {
+          const announcementId = response.data.id.toString();
+          
+          // Upload each attachment
+          const uploadPromises = attachments.map(async (attachment, index) => {
+            const formData = new FormData();
+            formData.append('file', attachment.file);
+            formData.append('displayOrder', index.toString());
+
+            try {
+              const uploadResponse = await fetch(`/api/announcements/${announcementId}/attachments`, {
+                method: 'POST',
+                body: formData,
+              });
+
+              const result = await uploadResponse.json();
+              if (!result.success) {
+                throw new Error(result.error || 'Upload failed');
+              }
+
+              return { success: true, index };
+            } catch (error: any) {
+              return { success: false, index, error: error.message };
+            }
+          });
+
+          const uploadResults = await Promise.allSettled(uploadPromises);
+          const failedUploads = uploadResults.filter(
+            (result): result is PromiseRejectedResult | PromiseFulfilledResult<{ success: false; index: number; error: string }> => 
+              result.status === 'rejected' || (result.status === 'fulfilled' && !result.value.success)
+          );
+
+          if (failedUploads.length > 0) {
+            showToast(`Announcement created, but ${failedUploads.length} attachment(s) failed to upload`, 'warning');
+          }
+        }
+        
         const announcementsResponse = await apiService.getAnnouncements();
         if (announcementsResponse.success && announcementsResponse.data) {
           setAnnouncements(Array.isArray(announcementsResponse.data) ? announcementsResponse.data : []);
@@ -204,7 +243,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
         if (user?.role !== 'super_admin') {
           // Regular admin: announcement goes to review
           showToast(
-            'Announcement created successfully! Sent to superadmin for review.',
+            attachments && attachments.length > 0 
+              ? 'Announcement with attachments created successfully! Sent to superadmin for review.'
+              : 'Announcement created successfully! Sent to superadmin for review.',
             'success'
           );
         } else if (announcement?.scheduled_at) {
@@ -214,7 +255,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
             'success'
           );
         } else {
-          showToast('Announcement created successfully!', 'success');
+          showToast(
+            attachments && attachments.length > 0 
+              ? 'Announcement with attachments created successfully!'
+              : 'Announcement created successfully!',
+            'success'
+          );
         }
       } else {
         showToast(response.error || 'Failed to create announcement', 'error');
