@@ -1,6 +1,8 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
+import ImageLightbox from './ImageLightbox'
+import DocumentViewer from './DocumentViewer'
 import type { AnnouncementFile } from '@/lib/types'
 
 interface AttachmentListProps {
@@ -9,6 +11,9 @@ interface AttachmentListProps {
 }
 
 const AttachmentList: React.FC<AttachmentListProps> = ({ attachments, className = '' }) => {
+  const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null)
+  const [selectedDocument, setSelectedDocument] = useState<{ url: string; name: string; mimeType: string } | null>(null)
+
   if (!attachments || attachments.length === 0) {
     return null
   }
@@ -65,12 +70,10 @@ const AttachmentList: React.FC<AttachmentListProps> = ({ attachments, className 
           <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Images</h4>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {images.map((image) => (
-              <a
+              <button
                 key={image.id}
-                href={image.file_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group relative aspect-square rounded-lg overflow-hidden bg-gray-800/40 border border-gray-700/50 hover:border-blue-500/50 transition-all duration-200"
+                onClick={() => setSelectedImage({ url: image.file_url, name: image.file_name })}
+                className="group relative aspect-square rounded-lg overflow-hidden bg-gray-800/40 border border-gray-700/50 hover:border-blue-500/50 transition-all duration-200 cursor-pointer"
               >
                 <img
                   src={image.file_url}
@@ -85,7 +88,13 @@ const AttachmentList: React.FC<AttachmentListProps> = ({ attachments, className 
                     </p>
                   </div>
                 </div>
-              </a>
+                {/* Enlarge Icon */}
+                <div className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                  </svg>
+                </div>
+              </button>
             ))}
           </div>
         </div>
@@ -97,13 +106,10 @@ const AttachmentList: React.FC<AttachmentListProps> = ({ attachments, className 
           <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Documents</h4>
           <div className="space-y-2">
             {documents.map((doc) => (
-              <a
+              <button
                 key={doc.id}
-                href={doc.file_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                download
-                className="flex items-center gap-3 p-3 rounded-lg bg-gray-800/40 border border-gray-700/50 hover:bg-gray-800/60 hover:border-blue-500/50 transition-all duration-200 group"
+                onClick={() => setSelectedDocument({ url: doc.file_url, name: doc.file_name, mimeType: doc.mime_type })}
+                className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-800/40 border border-gray-700/50 hover:bg-gray-800/60 hover:border-blue-500/50 transition-all duration-200 group text-left"
               >
                 <div className="flex-shrink-0">
                   {getDocumentIcon(doc.mime_type)}
@@ -116,15 +122,36 @@ const AttachmentList: React.FC<AttachmentListProps> = ({ attachments, className 
                     {doc.mime_type.split('/')[1]?.toUpperCase() || 'FILE'}
                   </p>
                 </div>
-                <div className="flex-shrink-0">
+                <div className="flex-shrink-0 flex items-center gap-2">
+                  <span className="text-xs text-gray-500 group-hover:text-blue-400">View</span>
                   <svg className="w-5 h-5 text-gray-500 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   </svg>
                 </div>
-              </a>
+              </button>
             ))}
           </div>
         </div>
+      )}
+
+      {/* Image Lightbox */}
+      {selectedImage && (
+        <ImageLightbox
+          imageUrl={selectedImage.url}
+          fileName={selectedImage.name}
+          onClose={() => setSelectedImage(null)}
+        />
+      )}
+
+      {/* Document Viewer */}
+      {selectedDocument && (
+        <DocumentViewer
+          fileUrl={selectedDocument.url}
+          fileName={selectedDocument.name}
+          mimeType={selectedDocument.mimeType}
+          onClose={() => setSelectedDocument(null)}
+        />
       )}
     </div>
   )
