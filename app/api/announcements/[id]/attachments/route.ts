@@ -19,10 +19,11 @@ import {
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const files = await getAnnouncementFiles(params.id);
+    const { id } = await params;
+    const files = await getAnnouncementFiles(id);
 
     return NextResponse.json({
       success: true,
@@ -47,10 +48,11 @@ export async function GET(
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    console.log('[UPLOAD] Starting upload for announcement:', params.id);
+    const { id } = await params;
+    console.log('[UPLOAD] Starting upload for announcement:', id);
     const { userId } = await auth();
 
     if (!userId) {
@@ -97,7 +99,7 @@ export async function POST(
     const uploadResult = await uploadToImageKit(
       buffer,
       file.name,
-      `announcements/${params.id}`
+      `announcements/${id}`
     );
 
     console.log('[UPLOAD] ImageKit upload successful:', uploadResult.fileId);
@@ -105,7 +107,7 @@ export async function POST(
     // Save metadata to database
     const fileCategory = getFileCategory(file.type);
     const fileRecord = await createAnnouncementFile({
-      announcement_id: parseInt(params.id, 10),
+      announcement_id: parseInt(id, 10),
       file_url: uploadResult.url,
       imagekit_file_id: uploadResult.fileId,
       file_name: uploadResult.name,
@@ -140,9 +142,10 @@ export async function POST(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await params; // Await params even if not used directly
     const { userId } = await auth();
 
     if (!userId) {
