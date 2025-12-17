@@ -45,10 +45,18 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({ imageUrl, fileName, onClo
         </svg>
       </button>
 
-      {/* File Name */}
-      <div className="absolute top-6 left-6 px-5 py-3 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 shadow-lg">
-        <p className="text-sm text-white font-medium truncate max-w-md">{fileName}</p>
-      </div>
+      {/* Download Button */}
+      <a
+        href={imageUrl}
+        download={fileName}
+        onClick={(e) => e.stopPropagation()}
+        className="absolute top-6 left-6 p-3 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white transition-all duration-200 shadow-lg hover:scale-110 z-10"
+        title="Download"
+      >
+        <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+        </svg>
+      </a>
 
       {/* Image Container - Full Screen */}
       <div
