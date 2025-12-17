@@ -14,7 +14,7 @@ export interface AnnouncementFile {
 }
 
 export interface CreateAnnouncementFileData {
-  announcement_id: string;
+  announcement_id: number | string;
   file_url: string;
   imagekit_file_id: string;
   file_name: string;
@@ -63,7 +63,7 @@ export async function createAnnouncementFile(
  * Get all files for an announcement
  */
 export async function getAnnouncementFiles(
-  announcementId: string
+  announcementId: number | string
 ): Promise<AnnouncementFile[]> {
   const query = `
     SELECT * FROM announcement_files
@@ -79,7 +79,7 @@ export async function getAnnouncementFiles(
  * Get a single file by ID
  */
 export async function getAnnouncementFileById(
-  fileId: string
+  fileId: number | string
 ): Promise<AnnouncementFile | null> {
   const query = `
     SELECT * FROM announcement_files
@@ -93,7 +93,7 @@ export async function getAnnouncementFileById(
 /**
  * Delete a file record
  */
-export async function deleteAnnouncementFile(fileId: string): Promise<boolean> {
+export async function deleteAnnouncementFile(fileId: number | string): Promise<boolean> {
   const query = `
     DELETE FROM announcement_files
     WHERE id = $1
@@ -108,7 +108,7 @@ export async function deleteAnnouncementFile(fileId: string): Promise<boolean> {
  * Delete all files for an announcement
  */
 export async function deleteAnnouncementFiles(
-  announcementId: string
+  announcementId: number | string
 ): Promise<string[]> {
   const query = `
     DELETE FROM announcement_files
