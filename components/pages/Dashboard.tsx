@@ -213,12 +213,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
     try {
       const response = await apiService.createAnnouncement(data);
       if (response.success) {
+        console.log('[Dashboard] Announcement created:', response.data?.id);
+        console.log('[Dashboard] Attachments to upload:', attachments?.length || 0);
+        
         // Upload attachments if any and if announcement was created successfully
         if (attachments && attachments.length > 0 && response.data?.id) {
           const announcementId = response.data.id.toString();
+          console.log('[Dashboard] Starting attachment uploads for announcement:', announcementId);
           
           // Upload each attachment
           const uploadPromises = attachments.map(async (attachment, index) => {
+            console.log('[Dashboard] Uploading file:', attachment.file.name, 'Size:', attachment.file.size);
             const formData = new FormData();
             formData.append('file', attachment.file);
             formData.append('displayOrder', index.toString());

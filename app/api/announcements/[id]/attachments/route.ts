@@ -50,19 +50,25 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
+    console.log('[UPLOAD] Starting upload for announcement:', params.id);
     const { userId } = await auth();
 
     if (!userId) {
+      console.log('[UPLOAD] Unauthorized - no userId');
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
+    console.log('[UPLOAD] User authenticated:', userId);
+
     // Parse multipart form data
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const displayOrder = formData.get('displayOrder') as string;
+
+    console.log('[UPLOAD] File received:', file ? file.name : 'none', 'Size:', file ? file.size : 0);
 
     if (!file) {
       return NextResponse.json(
@@ -74,11 +80,14 @@ export async function POST(
     // Validate file
     const validation = validateFile(file);
     if (!validation.valid) {
+      console.log('[UPLOAD] Validation failed:', validation.error);
       return NextResponse.json(
         { success: false, error: validation.error },
         { status: 400 }
       );
     }
+
+    console.log('[UPLOAD] File validated, starting ImageKit upload');
 
     // Convert File to Buffer
     const bytes = await file.arrayBuffer();
@@ -90,6 +99,8 @@ export async function POST(
       file.name,
       `announcements/${params.id}`
     );
+
+    console.log('[UPLOAD] ImageKit upload successful:', uploadResult.fileId);
 
     // Save metadata to database
     const fileCategory = getFileCategory(file.type);
@@ -104,16 +115,18 @@ export async function POST(
       uploaded_by: userId,
     });
 
+    console.log('[UPLOAD] Database record created:', fileRecord.id);
+
     return NextResponse.json({
       success: true,
       data: fileRecord,
     });
   } catch (error) {
-    console.error('Error uploading attachment:', error);
+    console.error('[UPLOAD] Error uploading attachment:', error);
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to upload attachment',
+        error: error instanceof Error ? error.message : 'Failed to upload attachment',
       },
       { status: 500 }
     );
