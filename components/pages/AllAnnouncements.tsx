@@ -5,8 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
+import AttachmentList from '../ui/AttachmentList'
 import { apiService } from '@/services/api'
 import type { Announcement } from '@/types'
+import type { AnnouncementFile } from '@/lib/types'
 import { useAppUser } from '@/contexts/AppUserContext'
 import { isAnnouncementExpired, formatDateTime } from '@/utils/dateUtils'
 import { getCategoryColor, getCategoryIcon } from '@/constants/categoryStyles'
@@ -25,11 +27,31 @@ const AllAnnouncements: React.FC<AllAnnouncementsProps> = ({ onBackToDashboard }
   const [loading, setLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
+  const [attachmentsMap, setAttachmentsMap] = useState<Record<string, AnnouncementFile[]>>({})
   const { toasts, showToast, removeToast } = useToast()
 
   useEffect(() => {
     fetchAnnouncements()
   }, [])
+
+  useEffect(() => {
+    // Fetch attachments for all announcements
+    announcements.forEach(async (announcement) => {
+      if (announcement.id) {
+        try {
+          const response = await apiService.getAnnouncementAttachments(announcement.id.toString())
+          if (response.success && response.data) {
+            setAttachmentsMap(prev => ({
+              ...prev,
+              [announcement.id!]: response.data!
+            }))
+          }
+        } catch (error) {
+          console.error(`Error fetching attachments for announcement ${announcement.id}:`, error)
+        }
+      }
+    })
+  }, [announcements])
 
   const fetchAnnouncements = async () => {
     try {
@@ -212,6 +234,13 @@ const AllAnnouncements: React.FC<AllAnnouncementsProps> = ({ onBackToDashboard }
                     <CardDescription className="text-sm text-gray-300 leading-relaxed mb-4 select-text cursor-text">
                       {parseLinks(announcement.description)}
                     </CardDescription>
+                    
+                    {/* Attachments */}
+                    {announcement.id && attachmentsMap[announcement.id] && attachmentsMap[announcement.id].length > 0 && (
+                      <div className="mb-4">
+                        <AttachmentList attachments={attachmentsMap[announcement.id]} />
+                      </div>
+                    )}
                     
                     {/* Metadata */}
                     <div className="space-y-2 pt-4 border-t border-gray-800/30">
