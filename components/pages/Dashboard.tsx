@@ -179,6 +179,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
     setAnnouncementsToShow(5);
   }, [searchQuery, filterCategory]);
 
+  // Get the announcements to display (first N announcements)
+  const displayedAnnouncements = sortedForRecentAnnouncements.slice(0, announcementsToShow);
+  const hasMoreAnnouncements = sortedForRecentAnnouncements.length > announcementsToShow;
+
+  // Preload attachments for displayed announcements (recent 5)
+  useEffect(() => {
+    displayedAnnouncements.forEach((announcement) => {
+      if (announcement.id && !attachmentsMap[announcement.id]) {
+        fetchAttachments(announcement.id);
+      }
+    });
+  }, [displayedAnnouncements]);
+
   // Fetch attachments only when announcement is expanded (lazy loading)
   const fetchAttachments = async (announcementId: number) => {
     // Skip if already fetched
@@ -198,10 +211,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
       console.error(`Error fetching attachments for announcement ${announcementId}:`, error);
     }
   };
-
-  // Get the announcements to display (first N announcements)
-  const displayedAnnouncements = sortedForRecentAnnouncements.slice(0, announcementsToShow);
-  const hasMoreAnnouncements = sortedForRecentAnnouncements.length > announcementsToShow;
 
   // Clicking an announcement will record a 'view' event instead of auto-tracking on render
   const handleEditAnnouncement = (announcement: Announcement) => {
