@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import { createPortal } from 'react-dom'
 import ImageLightbox from './ImageLightbox'
 import DocumentViewer from './DocumentViewer'
 import type { AnnouncementFile } from '@/lib/types'
@@ -135,23 +136,25 @@ const AttachmentList: React.FC<AttachmentListProps> = ({ attachments, className 
         </div>
       )}
 
-      {/* Image Lightbox */}
-      {selectedImage && (
+      {/* Image Lightbox - Rendered at root level via portal */}
+      {selectedImage && typeof window !== 'undefined' && createPortal(
         <ImageLightbox
           imageUrl={selectedImage.url}
           fileName={selectedImage.name}
           onClose={() => setSelectedImage(null)}
-        />
+        />,
+        document.body
       )}
 
-      {/* Document Viewer */}
-      {selectedDocument && (
+      {/* Document Viewer - Rendered at root level via portal */}
+      {selectedDocument && typeof window !== 'undefined' && createPortal(
         <DocumentViewer
           fileUrl={selectedDocument.url}
           fileName={selectedDocument.name}
           mimeType={selectedDocument.mimeType}
           onClose={() => setSelectedDocument(null)}
-        />
+        />,
+        document.body
       )}
     </div>
   )
