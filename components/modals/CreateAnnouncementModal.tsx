@@ -5,7 +5,9 @@ import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
+import FileUploadSection from '../ui/FileUploadSection';
 import type { CreateAnnouncementData, Deadline } from '../../types';
+import type { AttachmentUpload } from '../../lib/types';
 import { CATEGORY_OPTIONS } from '../../constants/categories';
 import { useAppUser } from '../../contexts/AppUserContext';
 import { getPriorityForCategory, priorityToNumber, numberToPriority, getPriorityDisplayName, getPriorityExamples } from '../../utils/priorityMapping';
@@ -43,7 +45,7 @@ const convertLocalInputToUTC = (value?: string | null) => {
 interface CreateAnnouncementModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: CreateAnnouncementData) => Promise<void>;
+  onSubmit: (data: CreateAnnouncementData, attachments?: AttachmentUpload[]) => Promise<void>;
   loading?: boolean;
   initialData?: Partial<CreateAnnouncementData>;
   variant?: 'standard' | 'emergency';
@@ -69,6 +71,7 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
   const [emergencyDurationHours, setEmergencyDurationHours] = useState<number>(4);
   const [minScheduledDate, setMinScheduledDate] = useState<string>('');
   const [deadlines, setDeadlines] = useState<Deadline[]>([]);
+  const [attachments, setAttachments] = useState<AttachmentUpload[]>([]);
 
   const scheduledDeadlineMin = formData.scheduled_at
     ? formatDateForInput(formData.scheduled_at)
@@ -183,11 +186,20 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
 
     submission.deadlines = validDeadlines.length > 0 ? validDeadlines : null;
 
-    await onSubmit(submission);
-    setFormData(DEFAULT_FORM_STATE);
-    setDeadlines([]);
-    setPriorityDurationHours(2);
-    setEmergencyDurationHours(4);
+    try {
+      // Pass both the submission data and attachments to the parent handler
+      await onSubmit(submission, attachments.length > 0 ? attachments : undefined);
+      
+      // Reset form state on success
+      setFormData(DEFAULT_FORM_STATE);
+      setDeadlines([]);
+      setAttachments([]);
+      setPriorityDurationHours(2);
+      setEmergencyDurationHours(4);
+    } catch (error) {
+      console.error('Error in form submission:', error);
+      throw error;
+    }
   };
 
   const addDeadline = () => {
@@ -312,6 +324,37 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
             />
             <p className="text-xs text-gray-500">{formData.description.length} characters</p>
           </div>
+
+          {/* File Upload Section */}
+          <FileUploadSection
+            attachments={attachments}
+            onFilesAdd={(files) => {
+              const newAttachments: AttachmentUpload[] = files.map(file => {
+                const attachment: AttachmentUpload = { file };
+                
+                // Create preview for images
+                if (file.type.startsWith('image/')) {
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    setAttachments(prev =>
+                      prev.map(a =>
+                        a.file === file ? { ...a, preview: reader.result as string } : a
+                      )
+                    );
+                  };
+                  reader.readAsDataURL(file);
+                }
+                
+                return attachment;
+              });
+              
+              setAttachments(prev => [...prev, ...newAttachments]);
+            }}
+            onFileRemove={(index) => {
+              setAttachments(prev => prev.filter((_, i) => i !== index));
+            }}
+            disabled={loading}
+          />
 
           {isEmergencyVariant && (
             <div className="space-y-3 rounded-2xl border border-red-800/50 bg-red-900/10 p-4">
