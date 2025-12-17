@@ -83,12 +83,17 @@ export async function uploadToImageKit(
   try {
     const imagekit = getImageKit();
 
+    console.log('[ImageKit] Uploading file:', fileName, 'to folder:', folder);
+    console.log('[ImageKit] File type:', typeof file, 'Size:', file instanceof Buffer ? file.length : 'N/A');
+
     const result = await imagekit.upload({
       file,
       fileName,
       folder,
       useUniqueFileName: true,
     });
+
+    console.log('[ImageKit] Upload successful:', result.fileId);
 
     return {
       fileId: result.fileId,
@@ -99,8 +104,13 @@ export async function uploadToImageKit(
       fileType: result.fileType,
     };
   } catch (error) {
-    console.error('ImageKit upload error:', error);
-    throw new Error('Failed to upload file to ImageKit');
+    console.error('[ImageKit] Upload error details:', error);
+    console.error('[ImageKit] Error message:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('[ImageKit] Error stack:', error instanceof Error ? error.stack : 'No stack');
+    if (error && typeof error === 'object') {
+      console.error('[ImageKit] Full error object:', JSON.stringify(error, null, 2));
+    }
+    throw new Error(`Failed to upload file to ImageKit: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
