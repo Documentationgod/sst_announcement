@@ -59,14 +59,12 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({ imageUrl, fileName, onClo
       </a>
 
       {/* Image Container - Full Screen */}
-      <div
-        className="relative w-screen h-screen flex items-center justify-center p-4"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="relative w-screen h-screen flex items-center justify-center p-4">
         <img
           src={imageUrl}
           alt={fileName}
           className="max-w-full max-h-full object-contain drop-shadow-2xl animate-in zoom-in-95 fade-in duration-300"
+          onClick={(e) => e.stopPropagation()}
         />
       </div>
     </div>
