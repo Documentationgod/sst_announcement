@@ -236,7 +236,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
     try {
       const response = await apiService.createAnnouncement(data);
       if (response.success) {
-        const announcementId = response.data?.announcement?.id;
+        // Handle both response structures: direct Announcement or wrapped { announcement: ... }
+        const announcementId = (response.data as any)?.announcement?.id ?? (response.data as any)?.id;
         console.log('[Dashboard] Announcement created:', announcementId);
         console.log('[Dashboard] Attachments to upload:', attachments?.length || 0);
         
@@ -276,7 +277,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
           );
 
           if (failedUploads.length > 0) {
-            showToast(`Announcement created, but ${failedUploads.length} attachment(s) failed to upload`, 'warning');
+            showToast(`Announcement created, but ${failedUploads.length} attachment(s) failed to upload`, 'info');
           }
         }
         
@@ -289,7 +290,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
         setCreateModalVariant('standard');
         
         // Show success message based on user role
-        const announcement = response.data?.announcement;
+        const announcement = (response.data as any)?.announcement ?? response.data;
         if (user?.role !== 'super_admin') {
           // Regular admin: announcement goes to review
           showToast(

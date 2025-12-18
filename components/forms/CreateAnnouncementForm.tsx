@@ -116,14 +116,14 @@ const CreateAnnouncementForm: React.FC<CreateAnnouncementFormProps> = ({ onClose
 
       // Upload attachments if any
       if (attachments.length > 0 && response.data?.id) {
-        const uploadResults = await uploadAttachments(response.data.id)
+        const uploadResults = await uploadAttachments(response.data.id.toString())
         const failedUploads = uploadResults.filter(
           (result): result is PromiseRejectedResult | PromiseFulfilledResult<{ success: false; index: number; error: string }> => 
             result.status === 'rejected' || (result.status === 'fulfilled' && !result.value.success)
         )
 
         if (failedUploads.length > 0) {
-          showToast(`Announcement created, but ${failedUploads.length} attachment(s) failed to upload`, 'warning')
+          showToast(`Announcement created, but ${failedUploads.length} attachment(s) failed to upload`, 'info')
         } else {
           showToast('Announcement created successfully with attachments!', 'success')
         }
