@@ -3,12 +3,14 @@
 ## Database Migration Summary
 
 ### ✅ NeonDB Configuration
-- **Database**: `neondb` 
+
+- **Database**: `neondb`
 - **Host**: `ep-round-voice-a14by96l-pooler.ap-southeast-1.aws.neon.tech`
 - **Region**: Asia Pacific (Singapore)
 - **Connection**: PostgreSQL with SSL
 
 ### ✅ Tables Created (5 tables)
+
 All tables successfully created with proper structure:
 
 1. **users** - User authentication and profile data
@@ -38,11 +40,13 @@ All tables successfully created with proper structure:
    - Uploader tracking via Clerk ID
 
 ### ✅ Custom Enums
+
 - `user_role` - (student, student_admin, admin, super_admin, user)
 - `announcement_status` - (scheduled, active, urgent, expired)
 - `announcement_category` - (academic, sil, club, general)
 
 ### ✅ Indexes for Performance
+
 - 14 indexes created across all tables
 - Optimized for common query patterns
 - Foreign key constraints with CASCADE delete
@@ -52,7 +56,9 @@ All tables successfully created with proper structure:
 ## ImageKit Integration
 
 ### ✅ Configuration
+
 **Environment Variables**:
+
 ```
 IMAGEKIT_PUBLIC_KEY=public_a50n8FsZIUDGik+H8kGlEN7/RRk=
 IMAGEKIT_PRIVATE_KEY=private_1oKHRKA/d6fJdAqDpbBC5O1+dJo=
@@ -60,16 +66,21 @@ IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/uykgbr8mo
 ```
 
 ### ✅ File Storage Structure
+
 All files uploaded to ImageKit will be organized as:
+
 ```
 /announcements/{announcement-id}/{filename}
 ```
 
 ### ✅ Supported File Types
+
 **Images** (max 5MB):
+
 - JPEG, PNG, GIF, WebP
 
 **Documents** (max 10MB):
+
 - PDF
 - Word (DOC, DOCX)
 - Excel (XLS, XLSX)
@@ -77,6 +88,7 @@ All files uploaded to ImageKit will be organized as:
 - Plain text
 
 ### ✅ Features Implemented
+
 1. **File Upload**
    - Multi-file selection
    - Drag & drop support
@@ -102,6 +114,7 @@ All files uploaded to ImageKit will be organized as:
 ## Verification Steps Completed
 
 ### ✅ Database Connection Test
+
 ```bash
 ✅ Successfully connected to NeonDB!
 📊 Database Status:
@@ -114,6 +127,7 @@ All files uploaded to ImageKit will be organized as:
 ```
 
 ### ✅ Development Server Running
+
 ```bash
 ▲ Next.js 16.0.7 (Turbopack)
 - Local:    http://localhost:3000
@@ -144,6 +158,7 @@ All files uploaded to ImageKit will be organized as:
 ## Environment Configuration
 
 ### Updated .env File
+
 ```env
 # Database (NeonDB)
 DATABASE_URL=postgresql://neondb_owner:npg_miOufTaB1hy7@ep-round-voice-a14by96l-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
@@ -171,6 +186,7 @@ FRONTEND_URL=http://localhost:3000
 ## API Endpoints
 
 ### Announcements
+
 - `GET /api/announcements` - List all announcements (from **NeonDB**)
 - `POST /api/announcements` - Create announcement (save to **NeonDB**)
 - `GET /api/announcements/{id}` - Get announcement details (from **NeonDB**)
@@ -178,6 +194,7 @@ FRONTEND_URL=http://localhost:3000
 - `DELETE /api/announcements/{id}` - Delete announcement (from **NeonDB** + **ImageKit**)
 
 ### File Attachments
+
 - `GET /api/announcements/{id}/attachments` - List files (from **NeonDB**)
 - `POST /api/announcements/{id}/attachments` - Upload files (to **ImageKit**, metadata to **NeonDB**)
 - `DELETE /api/announcements/{id}/attachments/{fileId}` - Delete file (from **ImageKit** + **NeonDB**)
@@ -201,6 +218,7 @@ FRONTEND_URL=http://localhost:3000
 ## Testing Checklist
 
 ### ✅ Database
+
 - [x] NeonDB connection established
 - [x] All tables created successfully
 - [x] Enums configured properly
@@ -208,12 +226,14 @@ FRONTEND_URL=http://localhost:3000
 - [x] Foreign key constraints working
 
 ### ✅ ImageKit
+
 - [x] Configuration loaded from .env
 - [x] File upload endpoint ready
 - [x] File validation working
 - [x] URL endpoint accessible
 
 ### ✅ Application
+
 - [x] Next.js server running
 - [x] Environment variables loaded
 - [x] No compilation errors
@@ -228,7 +248,7 @@ FRONTEND_URL=http://localhost:3000
 
 1. **Open Application**: Navigate to http://localhost:3000
 2. **Login**: Authenticate with Clerk
-3. **Create Announcement**: 
+3. **Create Announcement**:
    - Fill in announcement details
    - Upload image files (test: JPG, PNG)
    - Upload document files (test: PDF)
@@ -281,15 +301,12 @@ FRONTEND_URL=http://localhost:3000
 
 1. ✅ **All data stored in NeonDB**
    - Users, announcements, settings, targets, file metadata
-   
 2. ✅ **All files stored in ImageKit**
    - Images and documents on CDN
    - Metadata references in database
-   
 3. ✅ **Proper separation of concerns**
    - Relational data → NeonDB
    - Binary files → ImageKit CDN
-   
 4. ✅ **Performance optimizations**
    - Lazy loading of attachments
    - CDN delivery for files
@@ -300,6 +317,7 @@ FRONTEND_URL=http://localhost:3000
 **Status**: ✅ **READY FOR TESTING**
 
 The application is configured to use:
+
 - **NeonDB** for all database operations
 - **ImageKit** for all file storage
 
