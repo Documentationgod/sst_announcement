@@ -907,16 +907,33 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                                     Pinned for campus-wide visibility
                                   </div>
                                 )}
-                                {expandedId === a.id && (
-                                  <div className="text-sm text-gray-300 leading-relaxed animate-in fade-in slide-in-from-top duration-300">
-                                    {parseLinks(a.description)}
-                                    {((a.id && attachmentsMap[a.id] && attachmentsMap[a.id].length > 0) || a.url) && (
-                                      <div className="mt-4">
-                                        <AttachmentList attachments={attachmentsMap[a.id] || []} url={a.url} />
+                                <div 
+                                  className={`grid transition-all duration-500 ease-in-out ${
+                                    expandedId === a.id ? 'grid-rows-[1fr] opacity-100 mt-4' : 'grid-rows-[0fr] opacity-0'
+                                  }`}
+                                >
+                                  <div className="overflow-hidden">
+                                    <div className="space-y-4">
+                                      {/* Description Section */}
+                                      <div className="space-y-2">
+                                        <div className="flex items-center gap-2 pb-2 border-b border-gray-700/50">
+                                          <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                          </svg>
+                                          <h4 className="text-sm font-bold text-green-400 uppercase tracking-wide">Description</h4>
+                                        </div>
+                                        <div className="text-sm text-gray-300 leading-relaxed">
+                                          {parseLinks(a.description)}
+                                        </div>
                                       </div>
-                                    )}
+                                      
+                                      {/* Attachments Section */}
+                                      {((a.id && attachmentsMap[a.id] && attachmentsMap[a.id].length > 0) || a.url) && (
+                                        <AttachmentList attachments={attachmentsMap[a.id] || []} url={a.url} />
+                                      )}
+                                    </div>
                                   </div>
-                                )}
+                                </div>
                               </div>
                             </div>
                             <div className="flex sm:flex-col md:flex-row items-center gap-2 w-full sm:w-auto justify-end mt-2 sm:mt-0 opacity-100 md:opacity-70 md:group-hover:opacity-100 transition-opacity duration-200">

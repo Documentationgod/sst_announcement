@@ -230,16 +230,23 @@ const AllAnnouncements: React.FC<AllAnnouncementsProps> = ({ onBackToDashboard }
                     </CardTitle>
                   </CardHeader>
                   
-                  <CardContent className="relative p-4 md:p-6 pt-0 md:pt-0">
-                    <CardDescription className="text-sm text-gray-300 leading-relaxed mb-4 select-text cursor-text">
-                      {parseLinks(announcement.description)}
-                    </CardDescription>
+                  <CardContent className="relative p-4 md:p-6 pt-0 md:pt-0 space-y-4">
+                    {/* Description Section */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 pb-2 border-b border-gray-700/50">
+                        <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <h4 className="text-sm font-bold text-green-400 uppercase tracking-wide">Description</h4>
+                      </div>
+                      <CardDescription className="text-sm text-gray-300 leading-relaxed select-text cursor-text">
+                        {parseLinks(announcement.description)}
+                      </CardDescription>
+                    </div>
                     
                     {/* Attachments */}
                     {((announcement.id && attachmentsMap[announcement.id] && attachmentsMap[announcement.id].length > 0) || announcement.url) && (
-                      <div className="mb-4">
-                        <AttachmentList attachments={announcement.id ? (attachmentsMap[announcement.id] || []) : []} url={announcement.url} />
-                      </div>
+                      <AttachmentList attachments={announcement.id ? (attachmentsMap[announcement.id] || []) : []} url={announcement.url} />
                     )}
                     
                     {/* Metadata */}
