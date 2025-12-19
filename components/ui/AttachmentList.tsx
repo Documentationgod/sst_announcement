@@ -79,7 +79,10 @@ const AttachmentList: React.FC<AttachmentListProps> = ({ attachments, className 
             {images.map((image) => (
               <div key={image.id} className="relative group">
                 <button
-                  onClick={() => setSelectedImage({ url: image.file_url, name: image.file_name })}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedImage({ url: image.file_url, name: image.file_name });
+                  }}
                   className="w-full aspect-square rounded-lg overflow-hidden bg-gray-800/40 border border-gray-700/50 hover:border-blue-500/50 transition-all duration-200 cursor-pointer"
                 >
                   <img
@@ -133,7 +136,10 @@ const AttachmentList: React.FC<AttachmentListProps> = ({ attachments, className 
             {documents.map((doc) => (
               <div key={doc.id} className="relative group">
                 <button
-                  onClick={() => setSelectedDocument({ url: doc.file_url, name: doc.file_name, mimeType: doc.mime_type })}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedDocument({ url: doc.file_url, name: doc.file_name, mimeType: doc.mime_type });
+                  }}
                   className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-800/40 border border-gray-700/50 hover:bg-gray-800/60 hover:border-blue-500/50 transition-all duration-200 text-left"
                 >
                   <div className="flex-shrink-0">
@@ -187,6 +193,7 @@ const AttachmentList: React.FC<AttachmentListProps> = ({ attachments, className 
               href={url}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
               className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-800/40 border border-gray-700/50 hover:bg-gray-800/60 hover:border-blue-500/50 transition-all duration-200 text-left"
             >
               <div className="flex-shrink-0">
