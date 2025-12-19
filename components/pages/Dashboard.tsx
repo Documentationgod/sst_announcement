@@ -769,7 +769,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                               : `bg-gradient-to-r from-slate-800/60 to-slate-800/40 border-slate-600 hover:border-slate-600 hover:shadow-xl ${getCategoryAccentClasses(a.category)}`
                           }`}
                           style={{ animationDelay: `${index * 100}ms` }}
-                          onClick={() => {
+                          onClick={(e) => {
+                            // Don't toggle card if a modal/viewer is currently open (z-index 60)
+                            const modalOpen = document.querySelector('.fixed.z-\\[60\\]');
+                            if (modalOpen) return;
+                            
                             const nextId = expandedId === a.id ? null : (a.id ?? null);
                             setExpandedId(nextId);
                             // Fetch attachments when expanding
