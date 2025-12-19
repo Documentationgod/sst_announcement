@@ -1,12 +1,5 @@
 import { getPool } from '../config/db';
-import { getIntakeYearFromEmail, extractBatchFromEmail } from '@/utils/studentYear';
-
-function getBatchCodeFromEmail(email: string): number | null {
-  const match = email.match(/\.([0-9]{2})[a-z]/i);
-  if (!match) return null;
-  const code = parseInt(match[1], 10);
-  return Number.isNaN(code) ? null : code;
-}
+import { getIntakeYearFromEmail, extractBatchFromEmail, getBatchCodeFromEmail } from '@/utils/studentYear';
 
 function getBatchYearFromCode(batchCode: number): number | null {
   if (batchCode === 23) return 2027;
@@ -102,50 +95,37 @@ async function searchBatchTables(email: string): Promise<{ tableName: string; ba
   return null;
 }
 
-function getBatchCodeStringFromEmail(email: string): string | null {
-  const batchCode = getBatchCodeFromEmail(email);
-  return batchCode !== null ? batchCode.toString() : null;
-}
-
 function getFullBatch(batchFromTable: string | null, email: string): string | null {
-  const batchCode = getBatchCodeStringFromEmail(email);
-  if (!batchCode) return null;
+  // Use extractBatchFromEmail as the base - it handles the email parsing correctly
+  const extractedBatch = extractBatchFromEmail(email);
+  if (!extractedBatch) return null;
   
+  // If we have batch info from table, prefer it but merge with extracted batch
   if (batchFromTable) {
     const letterMatch = batchFromTable.match(/([A-Z])$/i);
     const letter = letterMatch?.[1]?.toUpperCase();
     
     if (letter) {
-      return `${batchCode}${letter}`;
+      // Use the batch code from extracted batch and letter from table
+      const batchCode = extractedBatch.match(/^(\d{2})/)?.[1];
+      if (batchCode) {
+        return `${batchCode}${letter}`;
+      }
     }
     
+    // If table batch is already in correct format (e.g., "24A"), use it
     if (/^\d{2}[A-Z]$/.test(batchFromTable)) {
       return batchFromTable;
     }
   }
   
-  const letterMatch = email.match(/\.([0-9]{2})([a-z])/i);
-  const letter = letterMatch?.[2]?.toUpperCase();
-  
-  if (letter) {
-    return `${batchCode}${letter}`;
-  }
-  
-  return batchCode;
+  // Fall back to extracted batch from email
+  return extractedBatch;
 }
 
 function getFullBatchFromEmail(email: string): string | null {
-  const batchCode = getBatchCodeFromEmail(email);
-  if (batchCode === null) return null;
-  
-  const letterMatch = email.match(/\.([0-9]{2})([a-z])/i);
-  const letter = letterMatch?.[2]?.toUpperCase();
-  
-  if (letter) {
-    return `${batchCode}${letter}`;
-  }
-  
-  return batchCode.toString();
+  // Reuse the extractBatchFromEmail function which already handles this logic
+  return extractBatchFromEmail(email);
 }
 
 export async function updateUserBatchFromEmail(userId: number, email: string): Promise<string | null> {

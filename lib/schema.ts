@@ -76,10 +76,13 @@ export const announcementTargets = pgTable('announcement_targets', {
 export const announcementFiles = pgTable('announcement_files', {
   id: serial('id').primaryKey(),
   announcementId: integer('announcement_id').notNull().references(() => announcements.id, { onDelete: 'cascade' }),
-  cloudinaryUrl: text('cloudinary_url').notNull(),          // Cloudinary secure URL
-  publicId: text('public_id'),         // Cloudinary public_id (optional)
-  fileName: text('file_name'),         // Original file name
-  mimeType: text('mime_type').default('application/pdf'),
+  fileUrl: text('file_url').notNull(),                    // ImageKit URL
+  imagekitFileId: varchar('imagekit_file_id', { length: 255 }).notNull(), // ImageKit file ID
+  fileName: varchar('file_name', { length: 500 }),
+  mimeType: varchar('mime_type', { length: 100 }).default('application/pdf'),
+  fileCategory: varchar('file_category', { length: 20 }).default('document').notNull(), // 'image' or 'document'
+  displayOrder: integer('display_order').default(0),
+  uploadedBy: varchar('uploaded_by', { length: 255 }).notNull(), // Clerk user ID
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 

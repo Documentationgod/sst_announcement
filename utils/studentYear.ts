@@ -25,6 +25,14 @@ export function getIntakeYearFromEmail(email?: string | null): number | null {
   return (intakeCode < pivot ? 2000 : 1900) + intakeCode;
 }
 
+export function getBatchCodeFromEmail(email?: string | null): number | null {
+  if (!email) return null;
+  const match = email.match(/\.([0-9]{2})[a-z]/i);
+  if (!match) return null;
+  const code = parseInt(match[1], 10);
+  return Number.isNaN(code) ? null : code;
+}
+
 export function getYearLevelFromIntakeYear(intakeYear: number, referenceDate = new Date()): number {
   const diff = referenceDate.getFullYear() - intakeYear;
   return clamp(diff + 1, 1, MAX_YEAR_LEVEL);

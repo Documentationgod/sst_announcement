@@ -5,7 +5,7 @@ type DeploymentProfile = 'local' | 'production';
 const profiles: Record<DeploymentProfile, { frontendUrl: string; backendUrl: string }> = {
   local: {
     frontendUrl: 'http://localhost:3000',
-    backendUrl: 'http://localhost:8787',
+    backendUrl: 'http://localhost:3000',
   },
   production: {
     frontendUrl: 'https://sst-announcement.vercel.app',
