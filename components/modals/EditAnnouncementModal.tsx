@@ -313,7 +313,7 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
                 />
               </div>
             )}
-            <div>
+            {/* <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Reminder Time</label>
               <input
                 type="datetime-local"
@@ -321,7 +321,7 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
                 onChange={(e) => setFormData({ ...formData, reminder_time: e.target.value })}
                 className="w-full px-4 py-2 bg-black border border-gray-900 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-            </div>
+            </div> */}
           </div>
           <div className="flex gap-3 pt-4">
             <Button
