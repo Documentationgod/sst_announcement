@@ -761,7 +761,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                       return (
                         <div
                           key={a.id}
-                          className={`group relative overflow-hidden rounded-2xl border backdrop-blur-sm transition-all duration-300 animate-in fade-in slide-in-from-left ${(isAnnouncementExpired(a) || a.status === 'expired') ? 'opacity-70 grayscale' : ''} ${
+                          className={`group relative overflow-hidden rounded-2xl border backdrop-blur-sm transition-all duration-300 animate-in fade-in slide-in-from-left cursor-pointer ${(isAnnouncementExpired(a) || a.status === 'expired') ? 'opacity-70 grayscale' : ''} ${
                             isEmergency || isPriorityActive
                               ? 'bg-gradient-to-r from-red-900/60 to-red-800/40 border-red-500/50 hover:border-red-400 hover:shadow-xl hover:shadow-red-500/30 border-l-4 border-l-red-500'
                               : hasApproachingDate
@@ -769,6 +769,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                               : `bg-gradient-to-r from-slate-800/60 to-slate-800/40 border-slate-600 hover:border-slate-600 hover:shadow-xl ${getCategoryAccentClasses(a.category)}`
                           }`}
                           style={{ animationDelay: `${index * 100}ms` }}
+                          onClick={() => {
+                            const nextId = expandedId === a.id ? null : (a.id ?? null);
+                            setExpandedId(nextId);
+                            // Fetch attachments when expanding
+                            if (nextId && a.id) {
+                              fetchAttachments(a.id);
+                            }
+                          }}
                         >
                           <div className="relative flex flex-col sm:flex-row items-start justify-between p-4 md:p-6 gap-4">
                             <div className="flex items-start gap-3 md:gap-4 min-w-0 flex-1 w-full">
@@ -916,7 +924,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                                 variant="ghost"
                                 size="sm"
                                 className="h-10 w-10 p-0 text-gray-400 hover:text-white hover:bg-slate-700/50 rounded-xl transition-all duration-200"
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   const nextId = expandedId === a.id ? null : (a.id ?? null);
                                   setExpandedId(nextId);
                                   // Fetch attachments when expanding
@@ -938,7 +947,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                                       variant="ghost"
                                       size="sm"
                                       className="h-10 w-10 p-0 text-blue-400 hover:text-blue-300 hover:bg-blue-500/20 rounded-xl transition-all duration-200"
-                                      onClick={() => handleEditAnnouncement(a)}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEditAnnouncement(a);
+                                      }}
                                       title="Edit"
                                     >
                                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -950,7 +962,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                                     variant="ghost"
                                     size="sm"
                                     className="h-10 w-10 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-xl transition-all duration-200"
-                                    onClick={() => setShowDeleteConfirm(a.id!)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setShowDeleteConfirm(a.id!);
+                                    }}
                                     title="Delete"
                                   >
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
