@@ -911,6 +911,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                                   className={`grid transition-all duration-500 ease-in-out ${
                                     expandedId === a.id ? 'grid-rows-[1fr] opacity-100 mt-4' : 'grid-rows-[0fr] opacity-0'
                                   }`}
+                                  onClick={(e) => e.stopPropagation()}
                                 >
                                   <div className="overflow-hidden">
                                     <div className="space-y-4">
