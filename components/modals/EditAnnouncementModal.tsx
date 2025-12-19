@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
 import type { Announcement, UpdateAnnouncementData, Deadline } from '../../types';
 import { CATEGORY_OPTIONS } from '../../constants/categories';
 import { formatDateForInput } from '../../utils/dateUtils';
@@ -33,6 +35,7 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
     scheduled_at: '',
     reminder_time: '',
     target_years: null,
+    url: null,
   });
   const [deadlines, setDeadlines] = useState<Deadline[]>([]);
   const scheduledDeadlineMin = formData.scheduled_at
@@ -50,6 +53,7 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
         scheduled_at: formatDateForInput(announcement.scheduled_at),
         reminder_time: formatDateForInput(announcement.reminder_time),
         target_years: announcement.target_years ?? null,
+        url: announcement.url ?? null,
       });
       setDeadlines(announcement.deadlines || []);
     }
@@ -153,35 +157,95 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
             </button>
           </div>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Title *</label>
-            <input
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2 text-sm font-semibold text-gray-300">
+              <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+              </svg>
+              Title <span className="text-red-400">*</span>
+            </Label>
+            <Input
               type="text"
               required
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full px-4 py-2 bg-black border border-gray-900 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter announcement title"
+              className="bg-black/70 border-gray-800 text-white placeholder-gray-500 focus-visible:ring-blue-600/40"
+              placeholder="Enter a compelling title for your announcement"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Description *</label>
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2 text-sm font-semibold text-gray-300">
+              <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+              Description <span className="text-red-400">*</span>
+            </Label>
             <textarea
               required
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={4}
-              className="w-full px-4 py-2 bg-black border border-gray-900 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter announcement description"
+              rows={5}
+              className="w-full px-4 py-2 bg-black/70 border border-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600/40 resize-none"
+              placeholder="Provide detailed information about your announcement..."
             />
+            <p className="text-xs text-gray-500">{(formData.description || '').length} characters</p>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Category *</label>
+
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1.5 text-sm font-semibold text-gray-300">
+              <svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+              Link URL (Single Link Only)
+            </Label>
+            <p className="text-xs text-gray-400 mb-2">
+              Add a single link that will be displayed as a QR code on TV screens. This QR code will be shown alongside the announcement content.
+            </p>
+            <Input
+              type="url"
+              placeholder="https://example.com/form"
+              value={formData.url || ''}
+              onChange={(e) => {
+                const value = e.target.value.trim();
+                // Only allow one URL - if user tries to paste multiple, take the first one
+                const urlMatch = value.match(/https?:\/\/[^\s]+/);
+                const singleUrl = urlMatch ? urlMatch[0] : value;
+                setFormData({ ...formData, url: singleUrl || null });
+              }}
+              onBlur={(e) => {
+                const value = e.target.value.trim();
+                if (value && !value.match(/^https?:\/\/.+/)) {
+                  // Auto-add https:// if user forgot it
+                  if (!value.startsWith('http://') && !value.startsWith('https://')) {
+                    setFormData({ ...formData, url: `https://${value}` });
+                  }
+                }
+              }}
+              className="bg-black/70 border-gray-800 text-white placeholder-gray-500 focus-visible:ring-cyan-500/50 [color-scheme:dark]"
+            />
+            <div className="flex items-start gap-2 mt-2">
+              <svg className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-xs text-gray-500">
+                <span className="font-semibold text-gray-400">Note:</span> Only one link can be added per announcement. 
+                Examples: registration forms, event pages, or resource links. The link will be converted to a QR code and displayed on TV screens for easy scanning.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2 text-sm font-semibold text-gray-300">
+              <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+              </svg>
+              Category <span className="text-red-400">*</span>
+            </Label>
             <select
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              className="w-full px-4 py-2 bg-black border border-gray-900 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 bg-black/70 border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-600/40"
             >
               {CATEGORY_OPTIONS.map((cat) => (
                 <option key={cat.value} value={cat.value}>
@@ -190,9 +254,14 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
               ))}
             </select>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Visible to Intake Years</label>
-            <p className="text-xs text-gray-500 mb-2">Restrict announcement visibility by intake year.</p>
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-300">
+              <svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              Visible to Intake Years
+            </label>
+            <p className="text-xs text-gray-500">Select specific intake years or keep it visible to all.</p>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
@@ -223,10 +292,10 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
                 );
               })}
             </div>
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs text-gray-400">
               {isAllYears
-                ? 'Visible to all students.'
-                : `Currently visible to Intake ${formData.target_years?.join(', ')}`}
+                ? 'Announcement will be visible to all students.'
+                : `Visible to: Intake ${formData.target_years?.join(', ')}`}
             </p>
           </div>
           
@@ -292,36 +361,59 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Expiry Date</label>
-              <input
-                type="datetime-local"
-                value={formData.expiry_date || ''}
-                onChange={(e) => setFormData({ ...formData, expiry_date: e.target.value })}
-                className="w-full px-4 py-2 bg-black border border-gray-900 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            {isSuperAdmin && (
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Scheduled At</label>
-                <input
+          <div className="space-y-4">
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-300">
+              <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Schedule & Timing
+            </label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5 text-xs font-medium text-gray-400">
+                  <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Expiry Date
+                </Label>
+                <Input
                   type="datetime-local"
-                  value={formData.scheduled_at || ''}
-                  onChange={(e) => setFormData({ ...formData, scheduled_at: e.target.value })}
-                  className="w-full px-4 py-2 bg-black border border-gray-900 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={formData.expiry_date || ''}
+                  onChange={(e) => setFormData({ ...formData, expiry_date: e.target.value })}
+                  className="bg-gray-800/80 border-gray-700 text-white placeholder-gray-500 focus-visible:ring-cyan-500/50 [color-scheme:dark]"
                 />
               </div>
-            )}
-            {/* <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Reminder Time</label>
-              <input
-                type="datetime-local"
-                value={formData.reminder_time || ''}
-                onChange={(e) => setFormData({ ...formData, reminder_time: e.target.value })}
-                className="w-full px-4 py-2 bg-black border border-gray-900 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div> */}
+              {isSuperAdmin && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5 text-xs font-medium text-gray-400">
+                    <svg className="w-3.5 h-3.5 text-cyan-500/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Scheduled At
+                  </Label>
+                  <Input
+                    type="datetime-local"
+                    value={formData.scheduled_at || ''}
+                    onChange={(e) => setFormData({ ...formData, scheduled_at: e.target.value })}
+                    className="bg-gray-800/80 border-gray-700 text-white placeholder-gray-500 focus-visible:ring-cyan-500/50 [color-scheme:dark]"
+                  />
+                </div>
+              )}
+              {/* <div className="space-y-2">
+                <Label className="flex items-center gap-1.5 text-xs font-medium text-gray-400">
+                  <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                  Reminder Time
+                </Label>
+                <Input
+                  type="datetime-local"
+                  value={formData.reminder_time || ''}
+                  onChange={(e) => setFormData({ ...formData, reminder_time: e.target.value })}
+                  className="bg-gray-800/80 border-gray-700 text-white placeholder-gray-500 focus-visible:ring-cyan-500/50 [color-scheme:dark]"
+                />
+              </div> */}
+            </div>
           </div>
           <div className="flex gap-3 pt-4">
             <Button

@@ -902,9 +902,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                                 {expandedId === a.id && (
                                   <div className="text-sm text-gray-300 leading-relaxed animate-in fade-in slide-in-from-top duration-300">
                                     {parseLinks(a.description)}
-                                    {a.id && attachmentsMap[a.id] && attachmentsMap[a.id].length > 0 && (
+                                    {((a.id && attachmentsMap[a.id] && attachmentsMap[a.id].length > 0) || a.url) && (
                                       <div className="mt-4">
-                                        <AttachmentList attachments={attachmentsMap[a.id]} />
+                                        <AttachmentList attachments={attachmentsMap[a.id] || []} url={a.url} />
                                       </div>
                                     )}
                                   </div>

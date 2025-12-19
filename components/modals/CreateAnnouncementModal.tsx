@@ -358,6 +358,49 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
             <p className="text-xs text-gray-500">{formData.description.length} characters</p>
           </div>
 
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1.5 text-sm font-semibold text-gray-300">
+              <svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+              Link URL (Single Link Only)
+            </Label>
+            <p className="text-xs text-gray-400 mb-2">
+              Add a single link that will be displayed as a QR code on TV screens. This QR code will be shown alongside the announcement content.
+            </p>
+            <Input
+              type="url"
+              placeholder="https://example.com/form"
+              value={formData.url || ''}
+              onChange={(e) => {
+                const value = e.target.value.trim();
+                // Only allow one URL - if user tries to paste multiple, take the first one
+                const urlMatch = value.match(/https?:\/\/[^\s]+/);
+                const singleUrl = urlMatch ? urlMatch[0] : value;
+                setFormData({ ...formData, url: singleUrl || null });
+              }}
+              onBlur={(e) => {
+                const value = e.target.value.trim();
+                if (value && !value.match(/^https?:\/\/.+/)) {
+                  // Auto-add https:// if user forgot it
+                  if (!value.startsWith('http://') && !value.startsWith('https://')) {
+                    setFormData({ ...formData, url: `https://${value}` });
+                  }
+                }
+              }}
+              className="bg-black/70 border-gray-800 text-white placeholder-gray-500 focus-visible:ring-cyan-500/50 [color-scheme:dark]"
+            />
+            <div className="flex items-start gap-2 mt-2">
+              <svg className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-xs text-gray-500">
+                <span className="font-semibold text-gray-400">Note:</span> Only one link can be added per announcement. 
+                Examples: registration forms, event pages, or resource links. The link will be converted to a QR code and displayed on TV screens for easy scanning.
+              </p>
+            </div>
+          </div>
+
           {/* File Upload Section */}
           <FileUploadSection
             attachments={attachments}
@@ -801,51 +844,6 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
                 />
               </div>
             </div>
-
-            {formData.send_tv && (
-              <div className="space-y-2 bg-gray-900/30 border border-gray-800/50 rounded-xl p-4">
-                <Label className="flex items-center gap-1.5 text-sm font-semibold text-gray-300">
-                  <svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                  </svg>
-                  Link URL (Single Link Only)
-                </Label>
-                <p className="text-xs text-gray-400 mb-2">
-                  Add a single link that will be displayed on TV screens. This link will be shown alongside the announcement content.
-                </p>
-                <Input
-                  type="url"
-                  placeholder="https://example.com/form"
-                  value={formData.url || ''}
-                  onChange={(e) => {
-                    const value = e.target.value.trim();
-                    // Only allow one URL - if user tries to paste multiple, take the first one
-                    const urlMatch = value.match(/https?:\/\/[^\s]+/);
-                    const singleUrl = urlMatch ? urlMatch[0] : value;
-                    setFormData({ ...formData, url: singleUrl || null });
-                  }}
-                  onBlur={(e) => {
-                    const value = e.target.value.trim();
-                    if (value && !value.match(/^https?:\/\/.+/)) {
-                      // Auto-add https:// if user forgot it
-                      if (!value.startsWith('http://') && !value.startsWith('https://')) {
-                        setFormData({ ...formData, url: `https://${value}` });
-                      }
-                    }
-                  }}
-                  className="bg-gray-800/80 border-gray-700 text-white placeholder-gray-500 focus-visible:ring-cyan-500/50 [color-scheme:dark]"
-                />
-                <div className="flex items-start gap-2 mt-2">
-                  <svg className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p className="text-xs text-gray-500">
-                    <span className="font-semibold text-gray-400">Note:</span> Only one link can be added per announcement. 
-                    Examples: registration forms, event pages, or resource links. The link will be clickable on TV displays.
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Action Buttons */}

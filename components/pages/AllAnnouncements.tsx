@@ -236,9 +236,9 @@ const AllAnnouncements: React.FC<AllAnnouncementsProps> = ({ onBackToDashboard }
                     </CardDescription>
                     
                     {/* Attachments */}
-                    {announcement.id && attachmentsMap[announcement.id] && attachmentsMap[announcement.id].length > 0 && (
+                    {((announcement.id && attachmentsMap[announcement.id] && attachmentsMap[announcement.id].length > 0) || announcement.url) && (
                       <div className="mb-4">
-                        <AttachmentList attachments={attachmentsMap[announcement.id]} />
+                        <AttachmentList attachments={announcement.id ? (attachmentsMap[announcement.id] || []) : []} url={announcement.url} />
                       </div>
                     )}
                     
