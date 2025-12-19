@@ -31,6 +31,8 @@ const DEFAULT_FORM_STATE: CreateAnnouncementData = {
   is_emergency: false,
   priority_level: 3, 
   target_years: null,
+  target_batches: null,
+  url: null,
 };
 
 const PRIORITY_DURATION_OPTIONS = [1, 2, 4, 6, 12, 24];
@@ -236,7 +238,38 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
     });
   };
 
+  const toggleBatchSelection = (batch: string) => {
+    setFormData(prev => {
+      const current = prev.target_batches ?? [];
+      const exists = current.includes(batch);
+      const next = exists ? current.filter(b => b !== batch) : [...current, batch];
+      next.sort();
+      return { ...prev, target_batches: next.length ? next : null };
+    });
+  };
+
   const isAllYears = !formData.target_years || formData.target_years.length === 0;
+  const isAllBatches = !formData.target_batches || formData.target_batches.length === 0;
+  
+  const getBatchOptions = (): string[] => {
+    if (!formData.target_years || formData.target_years.length === 0) {
+      return [];
+    }
+    
+    const batches: string[] = [];
+    
+    if (formData.target_years.includes(24)) {
+      batches.push('24A', '24B');
+    }
+    
+    if (formData.target_years.includes(25)) {
+      batches.push('25A', '25B', '25C');
+    }
+    
+    return batches;
+  };
+  
+  const BATCH_OPTIONS = getBatchOptions();
 
   return (
     <div 
@@ -510,6 +543,53 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
             </p>
           </div>
 
+          {BATCH_OPTIONS.length > 0 && (
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-300">
+                <svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                Visible to Batches
+              </label>
+              <p className="text-xs text-gray-500">Select specific batches or keep it visible to all batches for selected years.</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, target_batches: null }))}
+                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                    isAllBatches
+                      ? 'bg-green-600 text-white shadow-lg shadow-green-600/40'
+                      : 'bg-green-900/40 text-green-200 hover:bg-green-800/40'
+                  }`}
+                >
+                  All batches
+                </button>
+                {BATCH_OPTIONS.map((batch) => {
+                  const isSelected = formData.target_batches?.includes(batch);
+                  return (
+                    <button
+                      key={batch}
+                      type="button"
+                      onClick={() => toggleBatchSelection(batch)}
+                      className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                        isSelected
+                          ? 'bg-teal-600 text-white shadow-lg shadow-teal-600/40'
+                          : 'bg-teal-900/40 text-teal-200 hover:bg-teal-800/40'
+                      }`}
+                    >
+                      {batch}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-gray-400">
+                {isAllBatches
+                  ? 'Announcement will be visible to all batches for selected years.'
+                  : `Visible to batches: ${formData.target_batches?.join(', ')}`}
+              </p>
+            </div>
+          )}
+
           {!isEmergencyVariant && (
             <div className="space-y-4">
               {/* Multiple Deadlines Section */}
@@ -721,6 +801,51 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
                 />
               </div>
             </div>
+
+            {formData.send_tv && (
+              <div className="space-y-2 bg-gray-900/30 border border-gray-800/50 rounded-xl p-4">
+                <Label className="flex items-center gap-1.5 text-sm font-semibold text-gray-300">
+                  <svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                  </svg>
+                  Link URL (Single Link Only)
+                </Label>
+                <p className="text-xs text-gray-400 mb-2">
+                  Add a single link that will be displayed on TV screens. This link will be shown alongside the announcement content.
+                </p>
+                <Input
+                  type="url"
+                  placeholder="https://example.com/form"
+                  value={formData.url || ''}
+                  onChange={(e) => {
+                    const value = e.target.value.trim();
+                    // Only allow one URL - if user tries to paste multiple, take the first one
+                    const urlMatch = value.match(/https?:\/\/[^\s]+/);
+                    const singleUrl = urlMatch ? urlMatch[0] : value;
+                    setFormData({ ...formData, url: singleUrl || null });
+                  }}
+                  onBlur={(e) => {
+                    const value = e.target.value.trim();
+                    if (value && !value.match(/^https?:\/\/.+/)) {
+                      // Auto-add https:// if user forgot it
+                      if (!value.startsWith('http://') && !value.startsWith('https://')) {
+                        setFormData({ ...formData, url: `https://${value}` });
+                      }
+                    }
+                  }}
+                  className="bg-gray-800/80 border-gray-700 text-white placeholder-gray-500 focus-visible:ring-cyan-500/50 [color-scheme:dark]"
+                />
+                <div className="flex items-start gap-2 mt-2">
+                  <svg className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-xs text-gray-500">
+                    <span className="font-semibold text-gray-400">Note:</span> Only one link can be added per announcement. 
+                    Examples: registration forms, event pages, or resource links. The link will be clickable on TV displays.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}

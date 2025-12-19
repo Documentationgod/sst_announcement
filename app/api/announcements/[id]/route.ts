@@ -10,6 +10,7 @@ import { parseId } from '@/lib/utils/validation';
 import { getDb } from '@/lib/config/db';
 import { announcements, announcementSettings, announcementTargets } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
+import { normalizeTargetBatches } from '../route';
 
 export async function GET(
   request: NextRequest,
@@ -63,6 +64,7 @@ export async function PATCH(
     const announcementUpdates: Record<string, unknown> = {};
     const settingsUpdates: Record<string, unknown> = {};
     let targetYears: number[] | null = null;
+    let targetBatches: string[] | null = null;
     let deadlines: Array<{ label: string; date: string }> | null = null;
 
     // Core announcement fields
@@ -101,6 +103,9 @@ export async function PATCH(
     // Targets and deadlines
     if (body.target_years !== undefined) {
       targetYears = normalizeTargetYears(body.target_years);
+    }
+    if (body.target_batches !== undefined) {
+      targetBatches = normalizeTargetBatches(body.target_batches);
     }
     if (body.deadlines !== undefined) {
       if (body.deadlines && Array.isArray(body.deadlines) && body.deadlines.length > 0) {
@@ -161,14 +166,14 @@ export async function PATCH(
     }
 
     // Update targets: delete existing and insert new ones
-    if (targetYears !== undefined || deadlines !== undefined) {
+    if (targetYears !== undefined || targetBatches !== undefined || deadlines !== undefined) {
       // Delete existing targets
       await db
         .delete(announcementTargets)
         .where(eq(announcementTargets.announcementId, id));
 
       // Insert new targets
-      const targetInserts: Array<{ announcementId: number; targetYear?: number | null; deadlineDate?: Date | null; deadlineLabel?: string | null }> = [];
+      const targetInserts: Array<{ announcementId: number; targetYear?: number | null; targetBatches?: string | null; deadlineDate?: Date | null; deadlineLabel?: string | null }> = [];
 
       // Add target years
       if (targetYears && targetYears.length > 0) {
@@ -176,10 +181,22 @@ export async function PATCH(
           targetInserts.push({
             announcementId: id,
             targetYear: year,
+            targetBatches: null,
             deadlineDate: null,
             deadlineLabel: null,
           });
         }
+      }
+
+      // Add target batches as JSON array
+      if (targetBatches && targetBatches.length > 0) {
+        targetInserts.push({
+          announcementId: id,
+          targetYear: null,
+          targetBatches: JSON.stringify(targetBatches), // Store as JSON array: ["24A", "25B"]
+          deadlineDate: null,
+          deadlineLabel: null,
+        });
       }
 
       // Add deadlines
@@ -188,6 +205,7 @@ export async function PATCH(
           targetInserts.push({
             announcementId: id,
             targetYear: null,
+            targetBatches: null,
             deadlineDate: new Date(deadline.date),
             deadlineLabel: deadline.label,
           });
@@ -217,6 +235,9 @@ export async function PATCH(
     );
   }
 }
+
+// Import normalizeTargetBatches from the main route file
+// normalizeTargetBatches is imported at the top
 
 function normalizeTargetYears(value: unknown): number[] | null {
   if (!value) {

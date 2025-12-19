@@ -61,6 +61,7 @@ export interface CreateAnnouncementData {
   emergency_expires_at?: string 
   priority_level?: number 
   target_years?: number[] | null
+  target_batches?: string[] | null
   url?: string | null
 }
 

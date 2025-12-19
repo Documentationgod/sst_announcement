@@ -15,14 +15,31 @@ interface FullAnnouncementData {
 export function mapAnnouncement(data: FullAnnouncementData) {
   const { announcement, settings, targets } = data;
   
-  // Extract target years from targets table
   const targetYears = targets
     .filter(t => t.targetYear !== null)
     .map(t => t.targetYear!)
-    .filter((year, index, arr) => arr.indexOf(year) === index) // Remove duplicates
+    .filter((year, index, arr) => arr.indexOf(year) === index)
     .sort((a, b) => a - b);
   
-  // Extract deadlines from targets table
+  // Get batches from targetBatches JSON array
+  const targetBatches: string[] = [];
+  for (const target of targets) {
+    if (target.targetBatches) {
+      // Parse JSON array if stored as string
+      try {
+        const batches = typeof target.targetBatches === 'string' 
+          ? JSON.parse(target.targetBatches) 
+          : target.targetBatches;
+        if (Array.isArray(batches)) {
+          targetBatches.push(...batches);
+        }
+      } catch (e) {
+        // If parsing fails, skip
+      }
+    }
+  }
+  const uniqueBatches = Array.from(new Set(targetBatches)).sort();
+  
   const deadlines = targets
     .filter((t): t is typeof t & { deadlineDate: Date | string } => 
       t.deadlineDate !== null && t.deadlineDate !== undefined
@@ -63,6 +80,7 @@ export function mapAnnouncement(data: FullAnnouncementData) {
     emergency_expires_at: settings?.emergencyExpiresAt || null,
     visible_after: settings?.visibleAfter || null,
     target_years: targetYears.length > 0 ? targetYears : null,
+    target_batches: uniqueBatches.length > 0 ? uniqueBatches : null,
     url: announcement.url || null,
   };
 }
@@ -79,7 +97,7 @@ async function fetchAnnouncementsWithJoins(options?: { limit?: number; offset?: 
       a.*,
       s.expiry_date, s.scheduled_at, s.reminder_time, s.priority_until,
       s.emergency_expires_at, s.send_email, s.email_sent, s.reminder_sent, s.send_tv, s.visible_after,
-      t.id as target_id, t.target_year, t.deadline_date, t.deadline_label
+      t.id as target_id, t.target_year, t.target_batches, t.deadline_date, t.deadline_label
     FROM announcements a
     LEFT JOIN announcement_settings s ON a.id = s.announcement_id
     LEFT JOIN announcement_targets t ON a.id = t.announcement_id
@@ -149,6 +167,7 @@ async function fetchAnnouncementsWithJoins(options?: { limit?: number; offset?: 
         id: row.target_id,
         announcementId: row.id,
         targetYear: row.target_year,
+        targetBatches: row.target_batches,
         deadlineDate: row.deadline_date,
         deadlineLabel: row.deadline_label,
       });
@@ -172,7 +191,7 @@ export async function fetchAnnouncementById(id: number) {
       a.*,
       s.expiry_date, s.scheduled_at, s.reminder_time, s.priority_until,
       s.emergency_expires_at, s.send_email, s.email_sent, s.reminder_sent, s.send_tv, s.visible_after,
-      t.id as target_id, t.target_year, t.deadline_date, t.deadline_label
+      t.id as target_id, t.target_year, t.target_batches, t.deadline_date, t.deadline_label
     FROM announcements a
     LEFT JOIN announcement_settings s ON a.id = s.announcement_id
     LEFT JOIN announcement_targets t ON a.id = t.announcement_id
@@ -236,6 +255,7 @@ export async function fetchAnnouncementById(id: number) {
         id: row.target_id,
         announcementId: row.id,
         targetYear: row.target_year,
+        targetBatches: row.target_batches,
         deadlineDate: row.deadline_date,
         deadlineLabel: row.deadline_label,
       });
@@ -255,7 +275,7 @@ export async function getTvData() {
       a.*,
       s.expiry_date, s.scheduled_at, s.reminder_time, s.priority_until,
       s.emergency_expires_at, s.send_email, s.email_sent, s.reminder_sent, s.send_tv, s.visible_after,
-      t.id as target_id, t.target_year, t.deadline_date, t.deadline_label
+      t.id as target_id, t.target_year, t.target_batches, t.deadline_date, t.deadline_label
     FROM announcements a
     INNER JOIN announcement_settings s ON a.id = s.announcement_id
     LEFT JOIN announcement_targets t ON a.id = t.announcement_id
@@ -315,6 +335,7 @@ export async function getTvData() {
         id: row.target_id,
         announcementId: row.id,
         targetYear: row.target_year,
+        targetBatches: row.target_batches,
         deadlineDate: row.deadline_date,
         deadlineLabel: row.deadline_label,
       });

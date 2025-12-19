@@ -34,18 +34,37 @@ export async function GET(request: NextRequest) {
     const normalizedRole = normalizeUserRole(currentUser?.role, currentUser?.is_admin);
     const canViewAll = hasAdminAccess(normalizedRole) || normalizedRole === 'super_admin';
     const userIntakeCode = currentUser ? extractIntakeCodeFromEmail(currentUser.email) : null;
+    const userBatch = currentUser?.batch || null;
 
     const filteredData = canViewAll
       ? data
       : data.filter(announcement => {
-          const targets = Array.isArray(announcement.target_years) ? announcement.target_years : null;
-          if (!targets || targets.length === 0) {
+          const targetYears = Array.isArray(announcement.target_years) ? announcement.target_years : null;
+          const targetBatches = Array.isArray(announcement.target_batches) ? announcement.target_batches : null;
+          
+          if ((!targetYears || targetYears.length === 0) && (!targetBatches || targetBatches.length === 0)) {
             return true;
           }
-          if (!userIntakeCode) {
-            return false;
+          
+          if (targetBatches && targetBatches.length > 0) {
+            if (!userBatch) {
+              return false;
+            }
+            if (targetBatches.includes(userBatch)) {
+              return true;
+            }
           }
-          return targets.includes(userIntakeCode); 
+          
+          if (targetYears && targetYears.length > 0) {
+            if (!userIntakeCode) {
+              return false;
+            }
+            if (targetYears.includes(userIntakeCode)) {
+              return true;
+            }
+          }
+          
+          return false;
         });
 
     return NextResponse.json({ success: true, data: filteredData });
@@ -87,6 +106,7 @@ export async function POST(request: NextRequest) {
       send_email = false,
       send_tv = false,
       target_years = null,
+      target_batches = null,
       is_emergency = false,
       emergency_expires_at = null,
       visible_after = null,
@@ -130,6 +150,7 @@ export async function POST(request: NextRequest) {
     }
 
     const normalizedTargetYears = normalizeTargetYears(target_years);
+    const normalizedTargetBatches = normalizeTargetBatches(target_batches);
 
     let normalizedDeadlines: any = null;
     if (deadlines && Array.isArray(deadlines) && deadlines.length > 0) {
@@ -225,27 +246,37 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Insert into announcement_targets table (target years and deadlines)
-    const targetInserts: Array<{ announcementId: number; targetYear?: number | null; deadlineDate?: Date | null; deadlineLabel?: string | null }> = [];
+    const targetInserts: Array<{ announcementId: number; targetYear?: number | null; targetBatches?: string | null; deadlineDate?: Date | null; deadlineLabel?: string | null }> = [];
 
-    // Add target years
     if (normalizedTargetYears && normalizedTargetYears.length > 0) {
       for (const year of normalizedTargetYears) {
         targetInserts.push({
           announcementId,
           targetYear: year,
+          targetBatches: null,
           deadlineDate: null,
           deadlineLabel: null,
         });
       }
     }
 
-    // Add deadlines
+    if (normalizedTargetBatches && normalizedTargetBatches.length > 0) {
+      // Store all batches as a JSON array in a single row
+      targetInserts.push({
+        announcementId,
+        targetYear: null,
+        targetBatches: JSON.stringify(normalizedTargetBatches), // Store as JSON array: ["24A", "25B"]
+        deadlineDate: null,
+        deadlineLabel: null,
+      });
+    }
+
     if (normalizedDeadlines && normalizedDeadlines.length > 0) {
       for (const deadline of normalizedDeadlines) {
         targetInserts.push({
           announcementId,
           targetYear: null,
+          targetBatches: null,
           deadlineDate: new Date(deadline.date),
           deadlineLabel: deadline.label,
         });
@@ -273,7 +304,7 @@ export async function POST(request: NextRequest) {
 
     if (send_email && canSendEmail) {
       try {
-        const emails = await resolveRecipientEmails(normalizedTargetYears);
+        const emails = await resolveRecipientEmails(normalizedTargetYears, normalizedTargetBatches);
         if (emails.length > 0) {
           const result = await sendAnnouncementEmail({
             title,
@@ -364,6 +395,29 @@ function normalizeTargetYears(value: unknown): number[] | null {
         .filter((year) => Number.isInteger(year) && year >= 1 && year <= 99) 
     )
   ).sort((a, b) => a - b);
+
+  return normalized.length > 0 ? normalized : null;
+}
+
+export function normalizeTargetBatches(value: unknown): string[] | null {
+  if (!value) {
+    return null;
+  }
+  if (!Array.isArray(value)) {
+    return null;
+  }
+  const normalized = Array.from(
+    new Set(
+      value
+        .map((entry) => {
+          if (typeof entry === 'string') {
+            return entry.trim().toUpperCase();
+          }
+          return null;
+        })
+        .filter((entry): entry is string => entry !== null && entry.length > 0)
+    )
+  ).sort();
 
   return normalized.length > 0 ? normalized : null;
 }
@@ -546,23 +600,38 @@ async function applyScheduleAdjustments(
 
 
 
-async function resolveRecipientEmails(targetYears: number[] | null): Promise<string[]> {
+async function resolveRecipientEmails(targetYears: number[] | null, targetBatches: string[] | null): Promise<string[]> {
   const db = getDb();
-  const rows = await db.select({ email: users.email }).from(users);
-  const normalizedTargets = Array.isArray(targetYears) && targetYears.length > 0 ? targetYears : null;
+  const rows = await db.select({ email: users.email, batch: users.batch }).from(users);
+  const normalizedTargetYears = Array.isArray(targetYears) && targetYears.length > 0 ? targetYears : null;
+  const normalizedTargetBatches = Array.isArray(targetBatches) && targetBatches.length > 0 ? targetBatches : null;
 
   return rows
-    .map((row) => row.email)
-    .filter((email): email is string => Boolean(email))
-    .filter((email) => {
-      if (!normalizedTargets) {
+    .map((row) => ({ email: row.email, batch: row.batch }))
+    .filter((row): row is { email: string; batch: string | null } => Boolean(row.email))
+    .filter((row) => {
+      if (!normalizedTargetYears && !normalizedTargetBatches) {
         return true;
       }
-      const intakeCode = extractIntakeCodeFromEmail(email);
-      if (!intakeCode) {
-        return false;
+      
+      // Check batch first if specified
+      if (normalizedTargetBatches && row.batch) {
+        if (normalizedTargetBatches.includes(row.batch)) {
+          return true;
+        }
       }
-      return normalizedTargets.includes(intakeCode);
-    });
+      
+      // Check year if specified
+      if (normalizedTargetYears) {
+        const intakeCode = extractIntakeCodeFromEmail(row.email);
+        if (intakeCode && normalizedTargetYears.includes(intakeCode)) {
+          return true;
+        }
+      }
+      
+      return false;
+    })
+    .map((row) => row.email);
 }
+
 

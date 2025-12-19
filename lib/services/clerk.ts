@@ -7,6 +7,7 @@ import { users } from '../schema';
 import { mapUser } from '../data/users';
 import type { AuthenticatedUser } from '../types/index';
 import { isAllowedDomain } from '../middleware/domain';
+import { updateUserBatchFromEmail, getBatchFromEmail } from '../utils/batchLookup';
 
 type ClerkJwtPayload = JwtPayload & {
   sub: string;
@@ -137,6 +138,9 @@ export async function syncClerkUser(claims: ClerkJwtPayload): Promise<Authentica
     return mapUser(updated);
   }
 
+  // Get batch information before creating user
+  const batch = await getBatchFromEmail(email);
+
   // Create new user
   const [created] = await db
     .insert(users)
@@ -145,9 +149,20 @@ export async function syncClerkUser(claims: ClerkJwtPayload): Promise<Authentica
       email,
       username: displayName,
       role: 'user',
+      batch: batch || null,
       lastLogin: new Date(),
     })
     .returning();
+
+  // If batch was not found initially, try to search batch tables and update
+  if (!batch && created.id) {
+    await updateUserBatchFromEmail(created.id, email);
+    // Refresh user data after batch update
+    const [updated] = await db.select().from(users).where(eq(users.id, created.id)).limit(1);
+    if (updated) {
+      return mapUser(updated);
+    }
+  }
 
   return mapUser(created);
 }

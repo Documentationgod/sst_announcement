@@ -62,11 +62,12 @@ export const announcementSettings = pgTable('announcement_settings', {
   visibleAfter: timestamp('visible_after', { withTimezone: true }),
 });
 
-// 3. Announcement targets table (target years + deadlines)
+// 3. Announcement targets table (target years + batches + deadlines)
 export const announcementTargets = pgTable('announcement_targets', {
   id: serial('id').primaryKey(),
   announcementId: integer('announcement_id').notNull().references(() => announcements.id, { onDelete: 'cascade' }),
   targetYear: integer('target_year'),
+  targetBatches: text('target_batches'), // JSON string like '["24A", "25B"]'
   deadlineDate: timestamp('deadline_date', { withTimezone: true }),
   deadlineLabel: text('deadline_label'),
 });
