@@ -99,6 +99,8 @@ sst_announcement/
 │   │   │       └── route.ts           # Get all users
 │   │   ├── announcements/       # Announcement CRUD
 │   │   │   ├── [id]/             # Announcement by ID
+│   │   │   │   ├── attachments/  # File attachments management
+│   │   │   │   └── route.ts      # Upload/Get/Delete attachments
 │   │   │   └── route.ts          # List/Create announcements
 │   │   ├── profile/              # User profile
 │   │   ├── tv/                   # TV display endpoint
@@ -136,6 +138,7 @@ sst_announcement/
 │   │   └── env.ts                # Environment validation
 │   ├── data/                     # Data access layer
 │   │   ├── announcements.ts      # Announcement data access
+│   │   ├── announcement-files.ts # File attachments data access
 │   │   └── users.ts              # User data access
 │   ├── middleware/               # Middleware functions
 │   │   ├── auth.ts               # Authentication middleware
@@ -145,7 +148,8 @@ sst_announcement/
 │   ├── schema.ts                 # Drizzle ORM schema
 │   ├── services/                 # External services
 │   │   ├── clerk.ts              # Clerk service
-│   │   └── email.ts              # Email service (Resend)
+│   │   ├── email.ts              # Email service (Resend)
+│   │   └── imagekit.ts           # ImageKit CDN service
 │   ├── types/                    # TypeScript types
 │   │   └── index.ts              # Type definitions
 │   └── utils/                    # Utilities
@@ -229,6 +233,11 @@ sst_announcement/
    RESEND_API_KEY=re_...
    RESEND_FROM_EMAIL=noreply@yourdomain.com
 
+   # ImageKit CDN (Required for file uploads)
+   IMAGEKIT_PUBLIC_KEY=your_public_key
+   IMAGEKIT_PRIVATE_KEY=your_private_key
+   IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/your_id
+
    # Optional Configuration
    FRONTEND_URL=http://localhost:3000
    BACKEND_URL=http://localhost:3000
@@ -240,7 +249,11 @@ sst_announcement/
 
    The database schema is defined in `lib/schema.ts` using Drizzle ORM. You'll need to:
    - Create the database tables manually based on the schema
-   - Ensure all required tables exist: `users`, `announcements`
+   - Ensure all required tables exist: `users`, `announcements`, `announcement_files`
+   - Run the migration script for file attachments:
+     ```bash
+     psql $DATABASE_URL -f scripts/create-announcement-files-table.sql
+     ```
    - Add any missing columns if you encounter schema errors (see [Database Schema Updates](#-database-schema-updates) section)
 
 5. **Start the development server**
@@ -309,6 +322,9 @@ The system supports attaching images and documents to announcements using ImageK
 - `POST /api/announcements` - Create announcement (Student Admin+)
 - `PATCH /api/announcements/[id]` - Update announcement (Admin+)
 - `DELETE /api/announcements/[id]` - Delete announcement (Admin+)
+- `GET /api/announcements/[id]/attachments` - Get all attachments for an announcement
+- `POST /api/announcements/[id]/attachments` - Upload attachment (Student Admin+)
+- `DELETE /api/announcements/[id]/attachments?fileId=xxx` - Delete attachment (Student Admin+)
 
 ### Admin Endpoints
 
@@ -359,6 +375,19 @@ The system supports attaching images and documents to announcements using ImageK
 - `emergency_expires_at` - Emergency expiration (with timezone)
 - `visible_after` - Visibility start time (with timezone)
 - `target_years` - Array of target student years (integer array, nullable)
+
+### Announcement Files Table (`announcement_files`)
+
+- `id` - Primary key (uuid, default gen_random_uuid())
+- `announcement_id` - Foreign key to announcements (integer, references announcements.id, onDelete: cascade)
+- `file_url` - Complete CDN URL from ImageKit (text, not null)
+- `imagekit_file_id` - Unique identifier from ImageKit for deletion operations (text, not null)
+- `file_name` - Original file name (text, not null)
+- `mime_type` - File MIME type (text, not null)
+- `file_category` - Category enum: `image` or `document` (text, not null)
+- `display_order` - Order for display (integer, default: 0)
+- `uploaded_by` - Clerk user ID of uploader (text, not null)
+- `created_at` - Upload timestamp (with timezone, default now)
 
 ## 🔐 Security Features
 
@@ -543,6 +572,9 @@ npm run type-check # TypeScript type checking
 - `SESSION_SECRET` - Session secret for secure sessions
 - `RESEND_API_KEY` - Resend API key (optional)
 - `RESEND_FROM_EMAIL` - Verified sender email (optional)
+- `IMAGEKIT_PUBLIC_KEY` - ImageKit public key (required for file uploads)
+- `IMAGEKIT_PRIVATE_KEY` - ImageKit private key (required for file uploads)
+- `IMAGEKIT_URL_ENDPOINT` - ImageKit URL endpoint (required for file uploads)
 - `DEPLOYMENT=production` - Set deployment mode
 - `CRON_SECRET` - Secret for cron job authentication
 
@@ -664,6 +696,33 @@ ADD COLUMN IF NOT EXISTS deadlines JSONB DEFAULT '[]'::jsonb;
 -- Optional: Add GIN index for better query performance
 CREATE INDEX IF NOT EXISTS idx_announcements_deadlines
 ON announcements USING GIN (deadlines);
+```
+
+**Create `announcement_files` table (if needed):**
+
+```sql
+-- Run the migration script
+psql $DATABASE_URL -f scripts/create-announcement-files-table.sql
+```
+
+Or manually:
+
+```sql
+CREATE TABLE IF NOT EXISTS announcement_files (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  announcement_id INTEGER NOT NULL REFERENCES announcements(id) ON DELETE CASCADE,
+  file_url TEXT NOT NULL,
+  imagekit_file_id TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  mime_type TEXT NOT NULL,
+  file_category TEXT NOT NULL CHECK (file_category IN ('image', 'document')),
+  display_order INTEGER DEFAULT 0,
+  uploaded_by TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_announcement_files_announcement_id ON announcement_files(announcement_id);
+CREATE INDEX idx_announcement_files_file_category ON announcement_files(file_category);
 ```
 
 ### Removing Unused Tables
