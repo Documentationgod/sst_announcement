@@ -933,7 +933,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                                       
                                       {/* Attachments Section */}
                                       {((a.id && attachmentsMap[a.id] && attachmentsMap[a.id].length > 0) || a.url) && (
-                                        <AttachmentList attachments={attachmentsMap[a.id] || []} url={a.url} />
+                                        <AttachmentList attachments={(a.id ? attachmentsMap[a.id] : undefined) || []} url={a.url} />
                                       )}
                                     </div>
                                   </div>
