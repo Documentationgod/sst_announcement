@@ -4,16 +4,18 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import type { Announcement, UpdateAnnouncementData, Deadline } from '../../types';
+import type { AttachmentUpload } from '@/lib/types';
 import { CATEGORY_OPTIONS } from '../../constants/categories';
 import { formatDateForInput } from '../../utils/dateUtils';
 import { useAppUser } from '../../contexts/AppUserContext';
 import { INTAKE_YEAR_OPTIONS } from '../../utils/studentYear';
+import FileUploadSection from '../ui/FileUploadSection';
 
 interface EditAnnouncementModalProps {
   isOpen: boolean;
   onClose: () => void;
   announcement: Announcement | null;
-  onSubmit: (id: number, data: UpdateAnnouncementData) => Promise<void>;
+  onSubmit: (id: number, data: UpdateAnnouncementData, attachments?: AttachmentUpload[]) => Promise<void>;
   loading?: boolean;
 }
 
@@ -38,6 +40,7 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
     url: null,
   });
   const [deadlines, setDeadlines] = useState<Deadline[]>([]);
+  const [attachments, setAttachments] = useState<AttachmentUpload[]>([]);
   const scheduledDeadlineMin = formData.scheduled_at
     ? formatDateForInput(formData.scheduled_at)
     : '';
@@ -74,6 +77,33 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
     return date.toISOString();
   };
 
+  const handleFilesAdd = (files: File[]) => {
+    const newAttachments: AttachmentUpload[] = files.map(file => {
+      const attachment: AttachmentUpload = { file };
+      
+      // Create preview for images
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setAttachments(prev =>
+            prev.map(a =>
+              a.file === file ? { ...a, preview: reader.result as string } : a
+            )
+          );
+        };
+        reader.readAsDataURL(file);
+      }
+      
+      return attachment;
+    });
+    
+    setAttachments(prev => [...prev, ...newAttachments]);
+  };
+
+  const handleFileRemove = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -92,7 +122,7 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
     if (!isSuperAdmin) {
       delete submissionData.scheduled_at;
     }
-    await onSubmit(announcement.id!, submissionData);
+    await onSubmit(announcement.id!, submissionData, attachments.length > 0 ? attachments : undefined);
   };
 
   const addDeadline = () => {
@@ -191,6 +221,13 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
             />
             <p className="text-xs text-gray-500">{(formData.description || '').length} characters</p>
           </div>
+
+          {/* File Upload Section */}
+          <FileUploadSection
+            attachments={attachments}
+            onFilesAdd={handleFilesAdd}
+            onFileRemove={handleFileRemove}
+          />
 
           <div className="space-y-2">
             <Label className="flex items-center gap-1.5 text-sm font-semibold text-gray-300">
