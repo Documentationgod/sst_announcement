@@ -15,23 +15,36 @@ interface ToastProps {
 }
 
 const Toast: React.FC<ToastProps> = ({ toast, onRemove }) => {
+  const [isExiting, setIsExiting] = React.useState(false)
+
   useEffect(() => {
     const timer = setTimeout(() => {
-      onRemove(toast.id)
-    }, 5000)
+      setIsExiting(true)
+      // Wait for exit animation to complete before removing
+      setTimeout(() => {
+        onRemove(toast.id)
+      }, 300)
+    }, 3000)
 
     return () => clearTimeout(timer)
   }, [toast.id, onRemove])
 
+  const handleClose = () => {
+    setIsExiting(true)
+    setTimeout(() => {
+      onRemove(toast.id)
+    }, 300)
+  }
+
   const getToastStyles = (type: Toast['type']) => {
     switch (type) {
       case 'success':
-        return 'bg-green-500/10 border-green-500/30 text-green-400'
+        return 'bg-gradient-to-r from-green-600 to-emerald-600 border-green-400 text-white shadow-green-500/50'
       case 'error':
-        return 'bg-red-500/10 border-red-500/30 text-red-400'
+        return 'bg-gradient-to-r from-red-600 to-rose-600 border-red-400 text-white shadow-red-500/50'
       case 'info':
       default:
-        return 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+        return 'bg-gradient-to-r from-blue-600 to-cyan-600 border-blue-400 text-white shadow-blue-500/50'
     }
   }
 
@@ -62,19 +75,22 @@ const Toast: React.FC<ToastProps> = ({ toast, onRemove }) => {
   return (
     <div
       className={cn(
-        'flex items-center gap-3 p-4 rounded-xl border backdrop-blur-sm shadow-lg animate-in slide-in-from-right duration-300',
-        getToastStyles(toast.type)
+        'flex items-center gap-3 p-4 rounded-xl border-2 shadow-2xl transition-all duration-300 ease-in-out',
+        getToastStyles(toast.type),
+        isExiting 
+          ? 'animate-out slide-out-to-right fade-out' 
+          : 'animate-in slide-in-from-right fade-in'
       )}
     >
       <div className="flex-shrink-0">
         {getIcon(toast.type)}
       </div>
-      <div className="flex-1 text-sm font-medium">
+      <div className="flex-1 text-sm font-semibold">
         {toast.message}
       </div>
       <button
-        onClick={() => onRemove(toast.id)}
-        className="flex-shrink-0 text-current hover:opacity-70 transition-opacity"
+        onClick={handleClose}
+        className="flex-shrink-0 text-white hover:bg-white/20 rounded-lg p-1 transition-all"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
