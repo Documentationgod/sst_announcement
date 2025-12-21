@@ -92,8 +92,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
   const filteredByRole = filterAnnouncementsByRole(visibleAnnouncements, derivedRole);
   const prioritizedAnnouncements = sortAnnouncementsByPriority(filteredByRole, derivedRole);
   const totalVisibleCount = useCountUp(visibleAnnouncements.length);
-  const clubCount = useCountUp(visibleAnnouncements.filter(a => a.category.toLowerCase() === 'club').length);
-  const techCount = useCountUp(visibleAnnouncements.filter(a => a.category.toLowerCase() === 'tech' || a.category.toLowerCase() === 'tech-workshops' || a.category.toLowerCase() === 'tech-events').length);
+  const academicCount = useCountUp(visibleAnnouncements.filter(a => a.category.toLowerCase() === 'academic').length);
+  const silCount = useCountUp(visibleAnnouncements.filter(a => a.category.toLowerCase() === 'sil').length);
 
   const filteredAnnouncements = searchAnnouncements(
     filterByCategory(prioritizedAnnouncements, filterCategory),
@@ -324,18 +324,60 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
     }
   };
 
-  const handleUpdateAnnouncement = async (id: number, data: UpdateAnnouncementData) => {
+  const handleUpdateAnnouncement = async (id: number, data: UpdateAnnouncementData, attachments?: AttachmentUpload[]) => {
     setEditLoading(true);
     try {
       const response = await apiService.updateAnnouncement(id, data);
       if (response.success) {
+        // Upload attachments if any
+        if (attachments && attachments.length > 0) {
+          console.log('[Dashboard] Uploading attachments for announcement:', id);
+          const uploadPromises = attachments.map(async (attachment, index) => {
+            const formData = new FormData();
+            formData.append('file', attachment.file);
+            formData.append('displayOrder', index.toString());
+
+            try {
+              const uploadResponse = await fetch(`/api/announcements/${id}/attachments`, {
+                method: 'POST',
+                body: formData,
+              });
+
+              const result = await uploadResponse.json();
+              if (!result.success) {
+                throw new Error(result.error || 'Upload failed');
+              }
+
+              return { success: true, index };
+            } catch (error: any) {
+              console.error(`[Dashboard] Failed to upload attachment ${index}:`, error);
+              return { success: false, index, error: error.message };
+            }
+          });
+
+          const uploadResults = await Promise.allSettled(uploadPromises);
+          const failedUploads = uploadResults.filter(
+            (result) => result.status === 'rejected' || (result.status === 'fulfilled' && !result.value.success)
+          );
+
+          if (failedUploads.length > 0) {
+            console.warn('[Dashboard] Some attachments failed to upload:', failedUploads);
+            showToast(`Announcement updated, but ${failedUploads.length} attachment(s) failed to upload`, 'error');
+          }
+        }
+        
         const announcementsResponse = await apiService.getAnnouncements();
         if (announcementsResponse.success && announcementsResponse.data) {
           setAnnouncements(Array.isArray(announcementsResponse.data) ? announcementsResponse.data : []);
         }
         setShowEditForm(false);
         setEditingAnnouncement(null);
-        showToast('Announcement updated successfully!', 'success');
+        showToast(
+          attachments && attachments.length > 0 
+            ? 'Announcement with attachments updated successfully!' 
+            : 'Announcement updated successfully!', 
+          'success'
+        );
       } else {
         showToast(response.error || 'Failed to update announcement', 'error');
       }
@@ -638,9 +680,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                   <div className="flex items-center justify-between">
                     <div className="space-y-2">
                       <div className="text-4xl font-black bg-gradient-to-r from-violet-300 to-fuchsia-300 bg-clip-text text-transparent">
-                        {clubCount}
+                        {academicCount}
                       </div>
-                      <p className="text-gray-400 font-semibold text-sm uppercase tracking-wider">Club Events</p>
+                      <p className="text-gray-400 font-semibold text-sm uppercase tracking-wider">Academic</p>
                     </div>
                   </div>
                 </CardContent>
@@ -652,9 +694,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                   <div className="flex items-center justify-between">
                     <div className="space-y-2">
                       <div className="text-4xl font-black bg-gradient-to-r from-emerald-300 to-teal-200 bg-clip-text text-transparent">
-                        {techCount}
+                        {silCount}
                       </div>
-                      <p className="text-gray-400 font-semibold text-sm uppercase tracking-wider">Tech Workshops</p>
+                      <p className="text-gray-400 font-semibold text-sm uppercase tracking-wider">SIL</p>
                     </div>
                   </div>
                 </CardContent>
@@ -871,7 +913,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewAllAnnouncements }) => {
                                 </div>
                                 <div className="flex items-center gap-3 mb-3 flex-wrap">
                                   <Badge variant={getCategoryColor(a.category)} className="text-xs px-3 py-1 font-semibold capitalize">
-                                    {a.category}
+                                    {a.category.toLowerCase() === 'sil' ? 'SIL' : a.category}
                                   </Badge>
                                   <span className="text-gray-500">•</span>
                                   <span className="text-sm text-gray-400">
